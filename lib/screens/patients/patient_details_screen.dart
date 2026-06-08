@@ -16,8 +16,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   final _visitNotesController = TextEditingController();
   final _smartGoalsController = TextEditingController();
   final _irpPlanController = TextEditingController();
+  
+  // Клінічні змінні для різних шкал
   String _selectedScale = 'Berg Balance Scale';
-  double _scaleScore = 45.0;
+  double _bergScore = 45.0;       // 0 - 56
+  String _ashworthScore = '1+';    // 0, 1, 1+, 2, 3, 4
+  double _barthelScore = 80.0;     // 0 - 100 (крок 5)
+  double _rivermeadScore = 11.0;   // 0 - 15
 
   @override
   void initState() {
@@ -37,25 +42,36 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     super.dispose();
   }
 
+  // Розумна генерація плану на основі діагнозу та SMART структури
   void _autoGenerateIrpFromEngine() {
     final engine = SmartIrpEngine();
     final plan = engine.autoGeneratePlan(
       mkh10Codes: [widget.patient.icdCode],
       age: (DateTime.now().year - widget.patient.dateOfBirth.year).toString(),
       plannedDays: 14,
-      goalsSmart: _smartGoalsController.text.isNotEmpty 
-          ? _smartGoalsController.text 
-          : 'Збільшити рівень функціональної незалежності та покращити мобільність за 14 днів.',
+      goalsSmart: '',
     );
 
     setState(() {
       _smartGoalsController.text = plan.goalsSmart;
-      _irpPlanController.text = 'Пов\'язані клінічні коди МКФ: ${plan.mfkCodes}\n\nРозклад реабілітаційного інтенсиву по днях:\n' +
-          plan.daysSchedule.entries.map((e) => 'День ${e.key}: ' + e.value.map((ex) => ex.title).join(', ')).join('\n');
+      
+      // Формуємо красивий структурований вивід програми вправ по днях
+      String formattedSchedule = '🧬 МІЖНАРОДНА КЛАСИФІКАЦІЯ ФУНКЦІОНУВАННЯ (МКФ):\nКоди: ${plan.mfkCodes}\n\n'
+          '📋 КОМПЛЕКСНА ПРОГРАМА РЕАБІЛІТАЦІЇ ТА ФІЗІОТЕРАПІЇ ПО ДНЯХ:\n\n';
+          
+      plan.daysSchedule.forEach((day, exercises) {
+        formattedSchedule += '📅 ДЕНЬ $day:\n';
+        for (var ex in exercises) {
+          formattedSchedule += '  • [${ex.category}] ${ex.title}\n    Дозування: ${ex.dosage}\n';
+        }
+        formattedSchedule += '\n';
+      });
+
+      _irpPlanController.text = formattedSchedule;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Двигун успішно розрахував ІРП на основі МКХ-10 та МКФ!')),
+      const SnackBar(content: Text('Двигун успішно розрахував ІРП на основі МКХ-10, SMART та МКФ!')),
     );
   }
 
@@ -70,17 +86,103 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     );
   }
 
+  // Фіксація візиту з коректно розрахованими балами
   void _submitVisitAndScale() {
-    if (_visitNotesController.text.isEmpty) return;
+    String assessmentResults = '';
+    
+    if (_selectedScale == 'Berg Balance Scale') {
+      assessmentResults = '$_selectedScale | Результат: ${_bergScore.toStringAsFixed(0)}/56 балів';
+    } else if (_selectedScale == 'Ashworth Scale') {
+      assessmentResults = '$_selectedScale | Тонус м\'язів: $_ashworthScore (за модифікованою шкалою)';
+    } else if (_selectedScale == 'Barthel Index') {
+      assessmentResults = '$_selectedScale | Результат: ${_barthelScore.toStringAsFixed(0)}/100 балів';
+    } else if (_selectedScale == 'Rivermead Mobility Index') {
+      assessmentResults = '$_selectedScale | Результат: ${_rivermeadScore.toStringAsFixed(0)}/15 балів';
+    }
+
     Provider.of<RehabProvider>(context, listen: false).addVisit(
       patientId: widget.patient.id,
-      notes: _visitNotesController.text,
-      assessmentResults: '$_selectedScale | Результат: ${_scaleScore.toStringAsFixed(0)} балів',
+      notes: _visitNotesController.text.isEmpty ? 'Побутовий огляд, оцінка динаміки рухів.' : _visitNotesController.text,
+      assessmentResults: assessmentResults,
     );
+    
     _visitNotesController.clear();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Дані нового оцінювання та візиту занесені до динаміки.')),
+      const SnackBar(content: Text('Дані професійного оцінювання внесені до карти пацієнта.')),
     );
+  }
+
+  // Динамічний віджет підбору балів під КОНКРЕТНУ шкалу
+  Widget _buildScaleSpecificInput() {
+    switch (_selectedScale) {
+      case 'Berg Balance Scale':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Оцінка рівноваги Берга: ${_bergScore.toStringAsFixed(0)} з 56 балів', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+            Slider(
+              value: _bergScore,
+              min: 0, max: 56, divisions: 56,
+              label: _bergScore.toStringAsFixed(0),
+              onChanged: (v) => setState(() => _bergScore = v),
+            ),
+            Text(_bergScore <= 20 ? '⚠️ Високий ризик падінь (Потрібна постійна опіка)' : _bergScore <= 40 ? '🟡 Помірний ризик падінь' : '🟢 Незалежне пересування пацієнта', style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+          ],
+        );
+      case 'Ashworth Scale':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Ступінь спастичності за Ашвортом:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
+            const SizedBox(height: 6),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: '0', label: Text('0')),
+                ButtonSegment(value: '1', label: Text('1')),
+                ButtonSegment(value: '1+', label: Text('1+')),
+                ButtonSegment(value: '2', label: Text('2')),
+                ButtonSegment(value: '3', label: Text('3')),
+                ButtonSegment(value: '4', label: Text('4')),
+              ],
+              selected: {_ashworthScore},
+              onSelectionChanged: (Set<String> newSelection) {
+                setState(() {
+                  _ashworthScore = newSelection.first;
+                });
+              },
+            ),
+          ],
+        );
+      case 'Barthel Index':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Індекс життєдіяльності Бартел: ${_barthelScore.toStringAsFixed(0)} з 100 балів', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+            Slider(
+              value: _barthelScore,
+              min: 0, max: 100, divisions: 20, // Крок 5 балів
+              label: _barthelScore.toStringAsFixed(0),
+              onChanged: (v) => setState(() => _barthelScore = v),
+            ),
+            Text(_barthelScore <= 20 ? '⚠️ Повна залежність у побуті' : _barthelScore <= 60 ? '🟡 Тяжка залежність' : '🟢 Помірна / легка залежність', style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+          ],
+        );
+      case 'Rivermead Mobility Index':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Індекс мобільності Рівермід: ${_rivermeadScore.toStringAsFixed(0)} з 15 балів', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+            Slider(
+              value: _rivermeadScore,
+              min: 0, max: 15, divisions: 15,
+              label: _rivermeadScore.toStringAsFixed(0),
+              onChanged: (v) => setState(() => _rivermeadScore = v),
+            ),
+          ],
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   void _renderMockPdfDocument(String docTitle, String templateBody) {
@@ -129,7 +231,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         ),
         body: TabBarView(
           children: [
-            // ТАБ 1: КАРТКА ПАЦІЄНТА, ЕКСПОРТ МОЗ ТА ВІЗИТИ
+            // ТАБ 1: КАРТКА ПАЦІЄНТА, ЕКСПОРТ ТА НОВИЙ ВІЗИТ
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ListView(
@@ -140,7 +242,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Клінічний діагноз: ${widget.patient.diagnosis}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          Text('Клінічний діагноз: ${widget.patient.diagnosis}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
                           Text('Код за МКХ-10: ${widget.patient.icdCode}   |   Вік пацієнта: $age років'),
                           Text('Дата народження: ${widget.patient.dateOfBirth.day}.${widget.patient.dateOfBirth.month}.${widget.patient.dateOfBirth.year}'),
@@ -163,7 +265,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                                   icon: const Icon(Icons.article_outlined),
                                   label: const Text('Окремий док. ІРП'),
                                   onPressed: () => _renderMockPdfDocument(
-                                    'Індивідуальний реабілітаційний planar пацієнта',
+                                    'Індивідуальний реабілітаційний план пацієнта',
                                     'ЗАТВЕРДЖЕНА СТРУКТУРА ІРП\nПацієнт: ${widget.patient.fullName}\n\n1. ЦІЛІ ЗА SMART:\n${_smartGoalsController.text}\n\n2. ПРОГРАМА НАДАННЯ РЕАБІЛІТАЦІЙНОЇ ДОПОМОГИ:\n${_irpPlanController.text}',
                                   ),
                                 ),
@@ -190,7 +292,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Провести оцінювання / Новий візит', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text('Провести клінічне оцінювання', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: _selectedScale,
@@ -198,30 +300,27 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                         .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                         .toList(),
                     onChanged: (v) => setState(() => _selectedScale = v!),
-                    decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Клінічна оціночна шкала'),
+                    decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Оціночна шкала'),
                   ),
-                  const SizedBox(height: 8),
-                  Text('Показник за шкалою: ${_scaleScore.toStringAsFixed(0)} балів'),
-                  Slider(
-                    value: _scaleScore,
-                    min: 0,
-                    max: 100,
-                    divisions: 100,
-                    label: _scaleScore.toStringAsFixed(0),
-                    onChanged: (v) => setState(() => _scaleScore = v),
-                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Відображає СУВОРО НАЛАШТОВАНІ віджети балів під обрану шкалу
+                  _buildScaleSpecificInput(),
+                  
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _visitNotesController,
                     decoration: const InputDecoration(
-                      labelText: 'Щоденник візиту / Нотатки терапевта',
+                      labelText: 'Щоденник візиту / Специфічні нотатки терапевта',
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 2,
                   ),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check_circle_outline),
                     onPressed: _submitVisitAndScale,
-                    child: const Text('Зафіксувати новий візит'),
+                    label: const Text('Зафіксувати оцінювання у динаміку'),
                   ),
                 ],
               ),
@@ -234,27 +333,25 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 children: [
                   ElevatedButton.icon(
                     icon: const Icon(Icons.auto_awesome),
-                    label: const Text('Згенерувати ІРП за кодом МКХ-10'),
+                    label: const Text('Розрахувати ІРП та комплекси вправ за МКХ-10'),
                     onPressed: _autoGenerateIrpFromEngine,
                     style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primaryContainer),
                   ),
                   const SizedBox(height: 16),
+                  const Text('Цілі реабілітації (Критерії SMART):', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
                   TextFormField(
                     controller: _smartGoalsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Цілі реабілітації (Критерії SMART)',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    maxLines: 6,
                   ),
                   const SizedBox(height: 16),
+                  const Text('Програма та розклад занять (Кінезо/Електро/Магніто/Інвентар):', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
                   TextFormField(
                     controller: _irpPlanController,
-                    decoration: const InputDecoration(
-                      labelText: 'Програма та розклад ІРП',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 8,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    maxLines: 12,
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -277,7 +374,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                         return Card(
                           child: ListTile(
                             leading: const Icon(Icons.trending_up, color: Colors.teal),
-                            title: Text(visit.assessmentResults, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            title: Text(visit.assessmentResults, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.teal)),
                             subtitle: Text('Дата проведення: ${visit.visitDate.day}.${visit.visitDate.month}.${visit.visitDate.year}\nНотатки: ${visit.notes}'),
                             isThreeLine: true,
                           ),
