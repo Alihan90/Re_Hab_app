@@ -115,6 +115,16 @@ class SmartIrpEngine {
     'T14.2': 'Перелом у неуточненій ділянці тіла (Стан після металоостеосинтезу кісток)',
   };
 
+  /// ДОДАНИЙ МЕТОД ДЛЯ ТЕСТІВ (викликає стару логіку)
+  SmartPlan generatePlan({required String icdCode, required String category}) {
+    return autoGeneratePlan(
+      mkh10Codes: [icdCode],
+      age: 'Дорослі',
+      plannedDays: 10,
+      goalsSmart: 'Відновлення',
+    );
+  }
+
   /// 3. ЖОРСТКИЙ ДВИГУН КЛІНІЧНОЇ ГЕНЕРАЦІЇ SMART + МКФ ТА ВПРАВ
   SmartPlan autoGeneratePlan({
     required List<String> mkh10Codes,
@@ -124,7 +134,6 @@ class SmartIrpEngine {
   }) {
     String selectedCode = mkh10Codes.isNotEmpty ? mkh10Codes.first : 'Невідомо';
     
-    // Дефолтні заготовки під клінічні випадки
     String smartResult = '';
     String mfkResult = '';
     List<ExerciseItem> baseExercises = [];
@@ -168,7 +177,7 @@ class SmartIrpEngine {
         ExerciseItem(title: 'Високоінтенсивна імпульсна магнітотерапія (SIS) на корінці C5-C7 для зниження спастики', category: 'Магнітотерапія', dosage: '10 хв, частота 5-10 Гц'),
       ];
     }
-    // Загальний дефолтний ортопедичний план (якщо код інший)
+    // Загальний дефолтний ортопедичний план
     else {
       smartResult = 
           '🎯 **S (Specific):** Ліквідація больового синдрому в ураженій ділянці, відновлення фізіологічного об\'єму рухів (ROM).\n'
@@ -187,13 +196,12 @@ class SmartIrpEngine {
       ];
     }
 
-    // Розподіл вправ по днях реабілітації із закладеною варіативністю
+    // Розподіл вправ по днях
     Map<int, List<ExerciseItem>> schedule = {};
     final random = Random();
 
     for (int day = 1; day <= plannedDays; day++) {
       List<ExerciseItem> todaysExercises = [];
-      // Кожен день беремо 3-5 вправ із базового пулу клінічного випадку
       int exCount = 3 + random.nextInt(3); 
       for (int i = 0; i < exCount; i++) {
         var ex = baseExercises[random.nextInt(baseExercises.length)];
@@ -201,7 +209,6 @@ class SmartIrpEngine {
           todaysExercises.add(ex);
         }
       }
-      // Якщо раптом список порожній, додаємо гарантовано першу вправу
       if (todaysExercises.isEmpty) {
         todaysExercises.add(baseExercises.first);
       }
