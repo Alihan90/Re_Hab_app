@@ -177,4 +177,41 @@ class SmartIrpEngine {
           '🏡 **R (Relevant):** Відновлення базових локомоторних функцій, прибирання кульгавості або обмежень підйому руки.\n'
           '⏱️ **T (Time-bound):** Досягти результату за $plannedDays днів.';
 
-      mfkResult = '
+      mfkResult = 'b280 (Відчуття болю), b710 (Рухливість суглобів), d450 (Ходьба / рух).';
+
+      baseExercises = [
+        ExerciseItem(title: 'Постізометрична релаксація (ПІР) та м\'які мануальні техніки мобілізації', category: 'Кінезотерапія', dosage: '25 хв'),
+        ExerciseItem(title: 'Пасивна розробка на апараті Continuous Passive Motion (CPM)', category: 'Тренажерні методи', dosage: '30 хв, кут за толерантністю'),
+        ExerciseItem(title: 'Вправи з використанням еластичних стрічок Thera-Band та блокових систем', category: 'З інвентарем', dosage: '3 серії по 12 повторень'),
+        ExerciseItem(title: 'Магнітотерапія на зону ураженого суглоба для зняття набряку та запалення', category: 'Магнітотерапія', dosage: '20 хв, індукція 30 мТл'),
+      ];
+    }
+
+    // Розподіл вправ по днях реабілітації із закладеною варіативністю
+    Map<int, List<ExerciseItem>> schedule = {};
+    final random = Random();
+
+    for (int day = 1; day <= plannedDays; day++) {
+      List<ExerciseItem> todaysExercises = [];
+      // Кожен день беремо 3-5 вправ із базового пулу клінічного випадку
+      int exCount = 3 + random.nextInt(3); 
+      for (int i = 0; i < exCount; i++) {
+        var ex = baseExercises[random.nextInt(baseExercises.length)];
+        if (!todaysExercises.contains(ex)) {
+          todaysExercises.add(ex);
+        }
+      }
+      // Якщо раптом список порожній, додаємо гарантовано першу вправу
+      if (todaysExercises.isEmpty) {
+        todaysExercises.add(baseExercises.first);
+      }
+      schedule[day] = todaysExercises;
+    }
+
+    return SmartPlan(
+      goalsSmart: smartResult,
+      mfkCodes: mfkResult,
+      daysSchedule: schedule,
+    );
+  }
+}
