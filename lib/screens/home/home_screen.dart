@@ -1,3 +1,4 @@
+import '../goniometry/goniometry_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rehab_provider.dart';
