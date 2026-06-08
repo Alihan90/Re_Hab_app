@@ -66,7 +66,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       _irpPlanController.text,
     );
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Зміни в конструкторі ІРП успішно збережено в локальну БД.')),
+      const SnackBar(content: Text('Зміни в конструкторі ІРП успешно збережено в локальну БД.')),
     );
   }
 
