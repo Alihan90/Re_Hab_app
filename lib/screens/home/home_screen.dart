@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rehab_provider.dart';
+import '../../services/smart_irp_engine.dart';
 import '../patients/add_patient_screen.dart';
 import '../patients/patient_details_screen.dart';
 
@@ -19,9 +20,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final rehabProvider = Provider.of<RehabProvider>(context);
     final activePatients = rehabProvider.patients.where((p) => p.isActive).toList();
 
-    // Список екранів для швидкого перемикання вкладок
+    // Список екранів для нижньої навігації
     final List<Widget> _tabs = [
-      // ВКЛАДКА 0: ПАЦІЄНТИ (Ваш оригінальний код)
+      // ВКЛАДКА 0: ПАЦІЄНТИ
       activePatients.isEmpty
           ? const Center(
               child: Text(
@@ -57,23 +58,22 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-      // ВКЛАДКА 1: ШКАЛИ (База оцінювання за нозологіями)
-      const _ScalesTabPlaceholder(),
+      // ВКЛАДКА 1: ПОВНОФУНКЦІОНАЛЬНИЙ КАТАЛОГ ШКАЛ (Реалізовано)
+      const ScalesTab(),
 
-      // ВКЛАДКА 2: ГОНІОМЕТРІЯ (Вимірювання кутів)
+      // ВКЛАДКА 2: ГОНІОМЕТРІЯ (Плейсхолдер для наступних кроків)
       const _GoniometryTabPlaceholder(),
 
-      // ВКЛАДКА 3: ВПРАВИ ТА МЕТОДИКИ (Фізичні, апаратні, інвентар)
+      // ВКЛАДКА 3: ВПРАВИ ТА МЕТОДИКИ (Плейсхолдер для наступних кроків)
       const _ExercisesTabPlaceholder(),
 
-      // ВКЛАДКА 4: НАЛАШТУВАННЯ
+      // ВКЛАДКА 4: НАЛАШТУВАННЯ (Плейсхолдер)
       const _SettingsTabPlaceholder(),
     ];
 
-    // Динамічні заголовки для AppBar залежно від обраної вкладки
     final List<String> _titles = [
       'Реабілітація: Пацієнти',
-      'Клінічні шкали та тести',
+      'Клінічні шкали та тести (42)',
       'Гоніометрія суглобів',
       'База вправ та фізіотерапії',
       'Налаштування системи'
@@ -100,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: const Icon(Icons.add),
             )
-          : null, // FAB відображається тільки на вкладці пацієнтів
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
@@ -120,24 +120,189 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- ТИМЧАСОВІ СТРУКТУРНІ ПЛЕЙСХОЛДЕРИ ДЛЯ ВЕНТИЛЯЦІЇ ДИЗАЙНУ ---
+// --- ІНТЕРАКТИВНИЙ МОДУЛЬ КЛІНІЧНИХ ШКАЛ ---
+class ScalesTab extends StatefulWidget {
+  const ScalesTab({Key? key}) : super(key: key);
 
-class _ScalesTabPlaceholder extends StatelessWidget {
-  const _ScalesTabPlaceholder({Key? key}) : super(key: key);
+  @override
+  State<ScalesTab> createState() => _ScalesTabState();
+}
+
+class _ScalesTabState extends State<ScalesTab> {
+  final SmartIrpEngine _engine = SmartIrpEngine();
+  String _searchQuery = '';
+  String _selectedCategory = 'Усі';
+  String _selectedAge = 'Всі';
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    // Фільтрація каталогу шкал на основі критеріїв користувача
+    final filteredScales = _engine.scalesCatalog.where((scale) {
+      final matchesSearch = scale.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          scale.fullName.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesCategory = _selectedCategory == 'Усі' || scale.category == _selectedCategory;
+      final matchesAge = _selectedAge == 'Всі' || scale.ageGroup == _selectedAge || scale.ageGroup == 'Всі';
+      return matchesSearch && matchesCategory && matchesAge;
+    }).toList();
+
+    return Column(
       children: [
-        const Text('Сортування за віком та нозологіями (40+ шкал):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 12),
-        Card(child: ListTile(leading: const Icon(Icons.elderly), title: const Text('Неврологічні шкали (Дорослі)'), subtitle: const Text('Berg, NIHSS, Ashworth, Barthel...'))),
-        Card(child: ListTile(leading: const Icon(Icons.child_care), title: const Text('Педіатричні шкали (Діти)'), subtitle: const Text('GMFM, WeeFIM, Alberta...'))),
-        Card(child: ListTile(leading: const Icon(Icons.accessible), title: const Text('Ортопедія та Травматологія'), subtitle: const Text('DASH, WOMAC, KOOS, Harris...'))),
+        // Панель пошуку та швидких фільтрів
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: 'Пошук шкал (напр. Berg, Ashworth, GMFM)...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            onChanged: (val) => setState(() => _searchQuery = val),
+          ),
+        ),
+
+        // Горизонтальний фільтр за КАТЕГОРІЯМИ НОЗОЛОГІЙ
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            children: ['Усі', 'Неврологія', 'Педіатрія', 'Ортопедія', 'Загальні'].map((cat) {
+              final isSelected = _selectedCategory == cat;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: FilterChip(
+                  label: Text(cat, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black87)),
+                  selected: isSelected,
+                  selectedColor: Colors.blue.shade700,
+                  checkmarkColor: Colors.white,
+                  onSelected: (bool selected) {
+                    setState(() => _selectedCategory = cat);
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+
+        // Горизонтальний фільтр за ВІКОВИМИ ГРУПАМИ
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          child: Row(
+            children: [
+              const Text('Вік:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(width: 12),
+              ...['Всі', 'Дорослі', 'Діти'].map((age) {
+                final isSelected = _selectedAge == age;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(age, style: const TextStyle(fontSize: 11)),
+                    selected: isSelected,
+                    onSelected: (val) {
+                      if (val) setState(() => _selectedAge = age);
+                    },
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+        const Divider(height: 10),
+
+        // Результати пошуку та виводу медичних даних
+        Expanded(
+          child: filteredScales.isEmpty
+              ? const Center(child: Text('За вказаними фільтрами шкал не знайдено.'))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  itemCount: filteredScales.length,
+                  itemBuilder: (ctx, idx) {
+                    final scale = filteredScales[idx];
+                    
+                    // Визначення кольору іконки залежно від напрямку медицини
+                    Color categoryColor = Colors.grey;
+                    IconData categoryIcon = Icons.assignment;
+                    if (scale.category == 'Неврологія') {
+                      categoryColor = Colors.purple;
+                      categoryIcon = Icons.psychology;
+                    } else if (scale.category == 'Педіатрія') {
+                      categoryColor = Colors.orange;
+                      categoryIcon = Icons.child_care;
+                    } else if (scale.category == 'Ортопедія') {
+                      categoryColor = Colors.red;
+                      categoryIcon = Icons.accessibility_new;
+                    } else if (scale.category == 'Загальні') {
+                      categoryColor = Colors.teal;
+                      categoryIcon = Icons.directions_walk;
+                    }
+
+                    return Card(
+                      elevation: 1.5,
+                      margin: const EdgeInsets.symmetric(vertical: 5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: ExpansionTile(
+                        leading: CircleAvatar(
+                          backgroundColor: categoryColor.withOpacity(0.12),
+                          child: Icon(categoryIcon, color: categoryColor, size: 20),
+                        ),
+                        title: Row(
+                          children: [
+                            Text(scale.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4)),
+                              child: Text(scale.ageGroup, style: TextStyle(fontSize: 9, color: Colors.grey.shade800, fontWeight: FontWeight.w600)),
+                            )
+                          ],
+                        ),
+                        subtitle: Text(scale.fullName, style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Divider(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.analytics_outlined, size: 14, color: Colors.blueGrey),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Діапазон оцінювання: від ${scale.minScore.toStringAsFixed(0)} до ${scale.maxScore.toStringAsFixed(0)} балів',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(color: Colors.grey.shade50, border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(6)),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Клінічна інтерпретація результатів:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black54)),
+                                      const SizedBox(height: 4),
+                                      Text(scale.interpretation, style: const TextStyle(fontSize: 12, height: 1.3, color: Colors.black87)),
+                                    ],
+                                  ),
+                                )
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
       ],
     );
   }
 }
+
+// --- ТИМЧАСОВІ СТРУКТУРНІ ПЛЕЙСХОЛДЕРИ ДЛЯ НАСТУПНИХ КРОКІВ ---
 
 class _GoniometryTabPlaceholder extends StatelessWidget {
   const _GoniometryTabPlaceholder({Key? key}) : super(key: key);
