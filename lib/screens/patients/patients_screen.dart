@@ -1,139 +1,134 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rehab_provider.dart';
-import '../../data/models/patient.dart';
-import '../../data/models/irp_plan.dart';
 
-class PatientsScreen extends StatefulWidget {
-  const PatientsScreen({Key? key}) : super(key: key);
+class AddPatientScreen extends StatefulWidget {
+  const AddPatientScreen({Key? key}) : super(key: key);
 
   @override
-  State<PatientsScreen> createState() => _PatientsScreenState();
+  State<AddPatientScreen> createState() => _AddPatientScreenState();
 }
 
-class _PatientsScreenState extends State<PatientsScreen> {
-  String _searchQuery = "";
+class _AddPatientScreenState extends State<AddPatientScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _diagnosisController = TextEditingController();
+  final _icdController = TextEditingController();
+  DateTime? _selectedDate;
 
-  void _showAddPatientDialog(BuildContext context, RehabProvider provider) {
-    final nameUkController = TextEditingController();
-    final nameEnController = TextEditingController();
-    final ageController = TextEditingController();
-    final diagnosisUkController = TextEditingController();
-    final diagnosisEnController = TextEditingController();
-    final mkhController = TextEditingController();
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _diagnosisController.dispose();
+    _icdController.dispose();
+    super.dispose();
+  }
 
-    showDialog(
+  void _presentDatePicker() {
+    showDatePicker(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(provider.locale == 'uk' ? 'Нова картка пацієнта' : 'New Patient Card'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameUkController, decoration: const InputDecoration(labelText: 'ПІБ (Укр)')),
-              TextField(controller: nameEnController, decoration: const InputDecoration(labelText: 'Full Name (Eng)')),
-              TextField(controller: ageController, decoration: const InputDecoration(labelText: 'Вік / Age'), keyboardType: TextInputType.number),
-              TextField(controller: diagnosisUkController, decoration: const InputDecoration(labelText: 'Клінічний діагноз (Укр)')),
-              TextField(controller: diagnosisEnController, decoration: const InputDecoration(labelText: 'Clinical Diagnosis (Eng)')),
-              TextField(controller: mkhController, decoration: const InputDecoration(labelText: 'Коди МКХ-10 (через кому), напр: I63.9, M50')),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(provider.locale == 'uk' ? 'Скасувати' : 'Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (nameUkController.text.isEmpty) return;
-              
-              final codes = mkhController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-              
-              final newPatient = Patient(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                nameUk: nameUkController.text,
-                nameEn: nameEnController.text.isEmpty ? nameUkController.text : nameEnController.text,
-                age: ageController.text,
-                birthDate: "01.01.1980",
-                generalDiagnosisUk: diagnosisUkController.text,
-                generalDiagnosisEn: diagnosisEnController.text,
-                diagnosisMkh10Codes: codes,
-                admissionDate: DateTime.now().toLocal().toString().split(' ')[0],
-                irp: IrpPlan(),
-              );
+      initialDate: DateTime(1980),
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now(),
+    ).then((pickedDate) {
+      if (pickedDate == null) return;
+      setState(() {
+        _selectedDate = pickedDate;
+      });
+    });
+  }
 
-              provider.addPatient(newPatient);
-              Navigator.of(ctx).pop();
-            },
-            child: Text(provider.locale == 'uk' ? 'Зберегти' : 'Save'),
-          ),
-        ],
-      ),
+  void _saveForm() {
+    if (!_formKey.currentState!.validate() || _selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Помилка: Заповніть текстові поля та вкажіть дату народження!')),
+      );
+      return;
+    }
+
+    Provider.of<RehabProvider>(context, listen: false).addPatient(
+      fullName: _nameController.text,
+      diagnosis: _diagnosisController.text,
+      icdCode: _icdController.text,
+      dateOfBirth: _selectedDate!,
     );
+
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<RehabProvider>(context);
-    final isUk = provider.locale == 'uk';
-
-    final filteredPatients = provider.patients.where((p) {
-      final searchLower = _searchQuery.toLowerCase();
-      return p.nameUk.toLowerCase().contains(searchLower) || 
-             p.nameEn.toLowerCase().contains(searchLower) ||
-             p.diagnosisMkh10Codes.any((c) => c.toLowerCase().contains(searchLower));
-    }).toList();
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(isUk ? 'Реєстр пацієнтів' : 'Patient Registry'),
-        backgroundColor: Colors.teal,
+        title: const Text('Створення картки'),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: TextField(
-              onChanged: (val) => setState(() => _searchQuery = val),
-              decoration: InputDecoration(
-                labelText: isUk ? 'Пошук за ПІБ або МКХ-10' : 'Search by name or ICD-10',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'ПІБ пацієнта (будь-якою мовою)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value!.isEmpty ? 'Вкажіть ПІБ пацієнта' : null,
               ),
-            ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _diagnosisController,
+                decoration: const InputDecoration(
+                  labelText: 'Клінічний діагноз',
+                  prefixIcon: Icon(Icons.healing_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value!.isEmpty ? 'Заповніть опис діагнозу' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _icdController,
+                decoration: const InputDecoration(
+                  labelText: 'Код за МКХ-10 (вручну)',
+                  hintText: 'Наприклад: I63.9 чи M50.1',
+                  prefixIcon: Icon(Icons.pin),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value!.isEmpty ? 'Вкажіть код МКХ-10' : null,
+              ),
+              const SizedBox(height: 16),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.calendar_month),
+                  title: Text(
+                    _selectedDate == null
+                        ? 'Оберіть дату народження пацієнта'
+                        : 'Дата народження: ${_selectedDate!.day}.${_selectedDate!.month}.${_selectedDate!.year}',
+                  ),
+                  trailing: const Icon(Icons.edit_calendar),
+                  onTap: _presentDatePicker,
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _saveForm,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+                child: const Text('Зберегти та відкрити доступ', style: TextStyle(fontSize: 16)),
+              ),
+            ],
           ),
-          Expanded(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredPatients.isEmpty
-                    ? Center(child: Text(isUk ? 'Пацієнтів не знайдено' : 'No patients found'))
-                    : ListView.builder(
-                        itemCount: filteredPatients.length,
-                        itemBuilder: (context, index) {
-                          final patient = filteredPatients[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            elevation: 3,
-                            child: ListTile(
-                              leading: const CircleAvatar(backgroundColor: Colors.teal, child: Icon(Icons.person, color: Colors.white)),
-                              title: Text(isUk ? patient.nameUk : patient.nameEn, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('${isUk ? 'Діагноз' : 'Diag'}: ${isUk ? patient.generalDiagnosisUk : patient.generalDiagnosisEn}\nМКХ-10: ${patient.diagnosisMkh10Codes.join(', ')}'),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                onPressed: () => provider.deletePatient(patient.id),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.teal,
-        onPressed: () => _showAddPatientDialog(context, provider),
-        child: const Icon(Icons.person_add, color: Colors.white),
+        ),
       ),
     );
   }
