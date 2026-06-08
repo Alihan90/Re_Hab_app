@@ -17,18 +17,18 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // Перемикач теми (тут secondary працює, бо це SwitchListTile)
+          // Перемикач теми інтерфейсу
           SwitchListTile(
             title: const Text('Темний режим інтерфейсу'),
             subtitle: const Text('Адаптація екрана для зменшення втоми очей'),
             value: rehabProvider.isDarkMode,
             secondary: const Icon(Icons.brightness_6),
             onChanged: (bool value) {
-              rehabProvider.toggleTheme(value);
+              // Виправлено: викликаємо метод без передачі аргументу value
+              rehabProvider.toggleTheme();
             },
           ),
           const Divider(),
-          // Виправлено: змінено secondary на leading для звичайного ListTile
           ListTile(
             leading: const Icon(Icons.language),
             title: const Text('Мова додатка'),
@@ -39,7 +39,6 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
           const Divider(),
-          // Виправлено: змінено secondary на leading для звичайного ListTile
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('Про медичний конструктор'),
