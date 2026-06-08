@@ -1,0 +1,51 @@
+name: Flutter Build & Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Завантажуємо код вашого репозиторію на сервер GitHub
+    - uses: actions/checkout@v4
+
+    # 2. Налаштовуємо Java (необхідна для збірки Android додатків)
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    # 3. Встановлюємо Flutter у хмарі GitHub
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+
+    # Крок 4.1: Завантаження залежностей, які ми прописали в pubspec.yaml
+    - name: Install dependencies
+      run: flutter pub get
+
+    # Крок 4.2: Автоматична генерація коду для бази даних Drift
+    - name: Run Drift code generation
+      run: dart run build_runner build --delete-conflicting-outputs
+
+    # Крок 4.3: Запуск нашого Unit-тесту для перевірки логіки ІРП
+    - name: Run Unit Tests
+      run: flutter test test/irp_engine_test.dart
+
+    # Крок 4.4: Фінальна збірка додатка в APK-файл
+    - name: Build APK Release
+      run: flutter build apk --release --target-platform android-arm64
+
+    # 5. Зберігаємо готовий APK файл, щоб ви могли його завантажити
+    - name: Upload Artifact APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: rehabilitation-app-release
+        path: build/app/outputs/flutter-apk/app-release.apk
