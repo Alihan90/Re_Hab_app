@@ -1,3 +1,4 @@
+import '../settings/settings_tab.dart';
 import '../exercises/exercises_tab.dart';
 import '../goniometry/goniometry_tab.dart';
 import 'package:flutter/material.dart';
