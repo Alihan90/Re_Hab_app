@@ -1,133 +1,42 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-
-// Відносні імпорти моделей
-import '../models/irp_plan.dart';
-import '../models/vital_signs.dart';
+import 'dart:io';
 
 part 'app_database.g.dart';
 
-// --- КОНВЕРТЕРИ ТИПІВ ДЛЯ СКЛАДНИХ ОБ'ЄКТІВ ---
-
-class StringListConverter extends TypeConverter<List<String>, String> {
-  const StringListConverter();
-  @override
-  List<String> fromSql(String fromDb) => List<String>.from(jsonDecode(fromDb) as List);
-  @override
-  String toSql(List<String> value) => jsonEncode(value);
-}
-
-class IrpPlanConverter extends TypeConverter<IrpPlan, String> {
-  const IrpPlanConverter();
-  @override
-  IrpPlan fromSql(String fromDb) => IrpPlan.fromJson(jsonDecode(fromDb) as Map<String, dynamic>);
-  @override
-  String toSql(IrpPlan value) => jsonEncode(value.toJson());
-}
-
-class VitalSignsConverter extends TypeConverter<VitalSigns, String> {
-  const VitalSignsConverter();
-  @override
-  VitalSigns fromSql(String fromDb) => VitalSigns.fromJson(jsonDecode(fromDb) as Map<String, dynamic>);
-  @override
-  String toSql(VitalSigns value) => jsonEncode(value.toJson());
-}
-
-class StringMapConverter extends TypeConverter<Map<String, String>, String> {
-  const StringMapConverter();
-  @override
-  Map<String, String> fromSql(String fromDb) => Map<String, String>.from(jsonDecode(fromDb) as Map);
-  @override
-  String toSql(Map<String, String> value) => jsonEncode(value);
-}
-
-class IntMapConverter extends TypeConverter<Map<String, int>, String> {
-  const IntMapConverter();
-  @override
-  Map<String, int> fromSql(String fromDb) => Map<String, int>.from(jsonDecode(fromDb) as Map);
-  @override
-  String toSql(Map<String, int> value) => jsonEncode(value);
-}
-
-// --- ТАБЛИЦІ БАЗИ ДАНИХ ---
-
-class PatientsTable extends Table {
-  TextColumn get id => text()();
-  TextColumn get nameUk => text()();
-  TextColumn get nameEn => text()();
-  TextColumn get age => text()();
-  TextColumn get birthDate => text()();
-  TextColumn get generalDiagnosisUk => text()();
-  TextColumn get generalDiagnosisEn => text()();
-  TextColumn get diagnosisMkh10Codes => text().map(const StringListConverter())();
-  TextColumn get admissionDate => text()();
-  TextColumn get irp => text().map(const IrpPlanConverter())();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
-class VisitsTable extends Table {
-  TextColumn get id => text()();
-  TextColumn get patientId => text().customConstraint('REFERENCES patients_table(id) ON DELETE CASCADE')();
-  DateTimeColumn get date => dateTime()();
-  TextColumn get therapeuticNote => text()();
-  TextColumn get vitals => text().map(const VitalSignsConverter())();
-  TextColumn get scaleResultsAtVisit => text().map(const StringMapConverter())();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
-class ScaleHistoriesTable extends Table {
+class Patients extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get patientId => text().customConstraint('REFERENCES patients_table(id) ON DELETE CASCADE')();
-  DateTimeColumn get date => dateTime()();
-  TextColumn get scaleId => text()();
-  TextColumn get scaleNameUk => text()();
-  IntColumn get totalScore => integer()();
-  TextColumn get interpretationUk => text()();
-  TextColumn get selectedAnswers => text().map(const IntMapConverter())();
+  TextColumn get fullName => text()(); // Один ПІБ для будь-якої розкладки клавіатури
+  TextColumn get diagnosis => text()(); // Один опис діагнозу
+  TextColumn get icdCode => text()();   // Код МКХ-10 для ручного введення
+  DateTimeColumn get dateOfBirth => dateTime()(); // Повна дата народження
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))(); // Статус для Архіву
+  TextColumn get smartGoals => text().nullable()();
+  TextColumn get irpPlan => text().nullable()();
 }
 
-class GoniometryHistoriesTable extends Table {
+class PatientVisits extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get patientId => text().customConstraint('REFERENCES patients_table(id) ON DELETE CASCADE')();
-  TextColumn get jointNameUk => text()();
-  TextColumn get movementTypeUk => text()();
-  IntColumn get measuredValueDegrees => integer()();
-  IntColumn get normalValueDegrees => integer()();
-  DateTimeColumn get date => dateTime()();
-  TextColumn get conclusionUk => text()();
+  IntColumn get patientId => integer().references(Patients, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get visitDate => dateTime()();
+  TextColumn get notes => text()();
+  TextColumn get assessmentResults => text()(); // Результати тестування за клінічними шкалами
 }
 
-// --- КЛАС ІНІЦІАЛІЗАЦІЇ БД ---
-
-@DriftDatabase(tables: [PatientsTable, VisitsTable, ScaleHistoriesTable, GoniometryHistoriesTable])
+@DriftDatabase(tables: [Patients, PatientVisits])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
   int get schemaVersion => 1;
-
-  @override
-  MigrationStrategy get migration {
-    return MigrationStrategy(
-      beforeOpen: (details) async {
-        await customStatement('PRAGMA foreign_keys = ON');
-      },
-    );
-  }
 }
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 're_hab_local.sqlite'));
+    final file = File(p.join(dbFolder.path, 'rehab_db.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
 }
