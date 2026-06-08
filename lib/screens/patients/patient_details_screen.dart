@@ -18,7 +18,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    // Виправлено помилку .join() — тепер просто виводимо стрічку кодів МКФ
+    // Виправлено: прибрано .join(), оскільки mfkCodes - це String
     _irpPlanController = TextEditingController(
       text: 'Пов\'язані клінічні коди МКФ: ${widget.patient.irpPlan}\n\nРозклад реабілітаційного інтенсиву по днях:\n• День 1-5: Активація рухових стереотипів\n• День 6-10: Збільшення амплітуди рухів (ROM)',
     );
@@ -43,11 +43,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             onPressed: () {
               setState(() {
                 if (_isEditing) {
-                  // Логіка збереження змін у провайдері
                   provider.updatePatientPlan(widget.patient.id, _irpPlanController.text);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('💾 Індивідуальний реабілітаційний план оновлено!')),
-                  );
                 }
                 _isEditing = !_isEditing;
               });
@@ -58,55 +54,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Card(
-              color: Theme.of(context).colorScheme.surfaceVariant,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('🩺 Клінічний діагноз: ${widget.patient.diagnosis}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    Text('📊 Код МКХ-10: ${widget.patient.icdCode}', style: const TextStyle(fontSize: 13, color: Colors.black87)),
-                    const SizedBox(height: 6),
-                    Text('📅 Статус картки: ${widget.patient.isActive ? "Активна (В роботі)" : "В архіві"}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text('📋 Індивідуальний реабілітаційний план (ІРП):', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-            const SizedBox(height: 8),
             TextFormField(
               controller: _irpPlanController,
-              maxLines: 12,
+              maxLines: 10,
               enabled: _isEditing,
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                filled: !_isEditing,
-                fillColor: _isEditing ? Colors.white : Colors.grey.shade100,
-              ),
-              style: const TextStyle(fontSize: 13, height: 1.4, fontFamily: 'monospace'),
+              decoration: const InputDecoration(border: OutlineInputBorder()),
             ),
-            const SizedBox(height: 20),
-            if (widget.patient.isActive)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
-                  icon: const Icon(Icons.archive_outlined),
-                  label: const Text('Завершити курс та перевести в архів'),
-                  onPressed: () {
-                    provider.togglePatientStatus(widget.patient.id);
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('📦 Картку пацієнта ${widget.patient.fullName} успішно архівовано.')),
-                    );
-                  },
-                ),
-              ),
           ],
         ),
       ),
