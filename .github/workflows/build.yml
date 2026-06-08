@@ -11,39 +11,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Завантажуємо код вашого репозиторію на сервер GitHub
+    # 1. Завантажуємо код вашого репозиторію
     - uses: actions/checkout@v4
 
-    # 2. Налаштовуємо Java (необхідна для збірки Android додатків)
+    # 2. Налаштовуємо Java
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
 
-    # 3. Встановлюємо Flutter у хмарі GitHub
+    # 3. Встановлюємо Flutter
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
 
-    # Крок 4.1: Завантаження залежностей, які ми прописали в pubspec.yaml
+    # 4. Створюємо відсутню Android-структуру (Gradle)
+    - name: Reconstruct Android platform folders
+      run: |
+        flutter create fresh_project --project-name=re_hab_app
+        cp -r fresh_project/android ./android
+        rm -rf fresh_project
+
+    # 5. Завантаження залежностей
     - name: Install dependencies
       run: flutter pub get
 
-    # Крок 4.2: Автоматична генерація коду для бази даних Drift
+    # 6. Автоматична генерація коду для бази даних Drift
     - name: Run Drift code generation
       run: dart run build_runner build --delete-conflicting-outputs
 
-    # Крок 4.3: Запуск нашого Unit-тесту для перевірки логіки ІРП
+    # 7. Запуск тесту
     - name: Run Unit Tests
       run: flutter test test/irp_engine_test.dart
 
-    # Крок 4.4: Фінальна збірка додатка в APK-файл
+    # 8. Фінальна збірка додатка в APK-файл
     - name: Build APK Release
       run: flutter build apk --release --target-platform android-arm64
 
-    # 5. Зберігаємо готовий APK файл, щоб ви могли його завантажити
+    # 9. Зберігаємо готовий APK файл для завантаження
     - name: Upload Artifact APK
       uses: actions/upload-artifact@v4
       with:
