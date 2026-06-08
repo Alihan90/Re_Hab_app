@@ -1,12 +1,12 @@
-import '../settings/settings_tab.dart';
-import '../exercises/exercises_tab.dart';
-import '../goniometry/goniometry_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rehab_provider.dart';
 import '../../services/smart_irp_engine.dart';
 import '../patients/add_patient_screen.dart';
 import '../patients/patient_details_screen.dart';
+import '../goniometry/goniometry_tab.dart';
+import '../exercises/exercises_tab.dart';
+import '../settings/settings_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -61,16 +61,16 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-      // ВКЛАДКА 1: ПОВНОФУНКЦІОНАЛЬНИЙ КАТАЛОГ ШКАЛ (Реалізовано)
+      // ВКЛАДКА 1: ПОВНОФУНКЦІОНАЛЬНИЙ КАТАЛОГ ШКАЛ
       const ScalesTab(),
 
-      // ВКЛАДКА 2: ГОНІОМЕТРІЯ (Плейсхолдер для наступних кроків)
+      // ВКЛАДКА 2: ЦИФРОВА ГОНІОМЕТРІЯ
       const GoniometryTab(),
 
-      // ВКЛАДКА 3: ВПРАВИ ТА МЕТОДИКИ (Плейсхолдер для наступних кроків)
+      // ВКЛАДКА 3: БАЗА ВПРАВ ТА ФІЗІОТЕРАПІЇ
       const ExercisesTab(),
 
-      // ВКЛАДКА 4: НАЛАШТУВАННЯ (Плейсхолдер)
+      // ВКЛАДКА 4: НАЛАШТУВАННЯ СИСТЕМИ
       const SettingsTab(),
     ];
 
@@ -300,59 +300,6 @@ class _ScalesTabState extends State<ScalesTab> {
                   },
                 ),
         ),
-      ],
-    );
-  }
-}
-
-// --- ТИМЧАСОВІ СТРУКТУРНІ ПЛЕЙСХОЛДЕРИ ДЛЯ НАСТУПНИХ КРОКІВ ---
-
-class _GoniometryTabPlaceholder extends StatelessWidget {
-  const _GoniometryTabPlaceholder({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Замір амплітуди рухів (ROM):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(icon: const Icon(Icons.screen_rotation), label: const Text('Виміряти за допомогою гіроскопа телефона'), onPressed: () {}),
-          const SizedBox(height: 16),
-          TextFormField(decoration: const InputDecoration(labelText: 'Кут згинання суглоба (градуси °)', border: OutlineInputBorder())),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExercisesTabPlaceholder extends StatelessWidget {
-  const _ExercisesTabPlaceholder({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: const [
-        Card(child: ListTile(leading: Icon(Icons.directions_run), title: Text('Кінезотерапія / Фізичні вправи'))),
-        Card(child: ListTile(leading: Icon(Icons.fitness_center), title: Text('Тренажерні та механотерапевтичні методи'))),
-        Card(child: ListTile(leading: Icon(Icons.bolt), title: Text('Електростимуляція та магнітотерапія'))),
-        Card(child: ListTile(leading: Icon(Icons.handyman), title: Text('Заняття з реабілітаційним інвентарем'))),
-      ],
-    );
-  }
-}
-
-class _SettingsTabPlaceholder extends StatelessWidget {
-  const _SettingsTabPlaceholder({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        SwitchListTile(title: const Text('Темна тема інтерфейсу'), value: false, onChanged: (v) {}),
-        ListTile(leading: const Icon(Icons.person), title: const Text('Профіль спеціаліста'), trailing: const Icon(Icons.chevron_right)),
-        ListTile(leading: const Icon(Icons.storage), title: const Text('Резервне копіювання БД (Експорт)'), trailing: const Icon(Icons.chevron_right)),
       ],
     );
   }
