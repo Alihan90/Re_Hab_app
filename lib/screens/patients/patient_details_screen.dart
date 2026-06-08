@@ -50,7 +50,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
     setState(() {
       _smartGoalsController.text = plan.goalsSmart;
-      _irpPlanController.text = 'Пов\'язані клінічні коди МКФ: ${plan.mfkCodes.join(", ")}\n\nРозклад реабілітаційного інтенсиву по днях:\n' +
+      _irpPlanController.text = 'Пов\'язані клінічні коди МКФ: ${plan.mfkCodes}\n\nРозклад реабілітаційного інтенсиву по днях:\n' +
           plan.daysSchedule.entries.map((e) => 'День ${e.key}: ' + e.value.map((ex) => ex.title).join(', ')).join('\n');
     });
 
@@ -129,6 +129,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         ),
         body: TabBarView(
           children: [
+            // ТАБ 1: КАРТКА ПАЦІЄНТА, ЕКСПОРТ МОЗ ТА ВІЗИТИ
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ListView(
@@ -162,7 +163,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                                   icon: const Icon(Icons.article_outlined),
                                   label: const Text('Окремий док. ІРП'),
                                   onPressed: () => _renderMockPdfDocument(
-                                    'Індивідуальний реабілітаційний план пацієнта',
+                                    'Індивідуальний реабілітаційний planar пацієнта',
                                     'ЗАТВЕРДЖЕНА СТРУКТУРА ІРП\nПацієнт: ${widget.patient.fullName}\n\n1. ЦІЛІ ЗА SMART:\n${_smartGoalsController.text}\n\n2. ПРОГРАМА НАДАННЯ РЕАБІЛІТАЦІЙНОЇ ДОПОМОГИ:\n${_irpPlanController.text}',
                                   ),
                                 ),
@@ -225,6 +226,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 ],
               ),
             ),
+
+            // ТАБ 2: СМАРТ КОНСТРУКТОР ТА ІРП
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ListView(
@@ -261,6 +264,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 ],
               ),
             ),
+
+            // ТАБ 3: КЛІНІЧНА ДИНАМІКА
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: provider.currentPatientVisits.isEmpty
