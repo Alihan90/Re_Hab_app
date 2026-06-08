@@ -66,7 +66,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       _irpPlanController.text,
     );
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Зміни в конструкторі ІРП успешно збережено в локальну БД.')),
+      const SnackBar(content: Text('Зміни в конструкторі ІРП успішно збережено в локальну БД.')),
     );
   }
 
@@ -129,7 +129,6 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         ),
         body: TabBarView(
           children: [
-            // ТАБ 1: КАРТКА ПАЦІЄНТА, ЕКСПОРТ МОЗ ТА ВІЗИТИ
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ListView(
@@ -226,8 +225,6 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 ],
               ),
             ),
-
-            // ТАБ 2: СМАРТ КОНСТРУКТОР ТА ІРП
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ListView(
@@ -264,8 +261,6 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 ],
               ),
             ),
-
-            // ТАБ 3: КЛІНІЧНА ДИНАМІКА
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: provider.currentPatientVisits.isEmpty
