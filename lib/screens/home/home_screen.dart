@@ -71,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const ExercisesTab(),
 
       // ВКЛАДКА 4: НАЛАШТУВАННЯ (Плейсхолдер)
-      const _SettingsTabPlaceholder(),
+      const SettingsTab(),
     ];
 
     final List<String> _titles = [
