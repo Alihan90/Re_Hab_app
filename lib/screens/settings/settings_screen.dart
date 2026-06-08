@@ -7,42 +7,53 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<RehabProvider>(context);
-    final isUk = provider.locale == 'uk';
+    final rehabProvider = Provider.of<RehabProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(isUk ? 'Налаштування' : 'Settings'), backgroundColor: Colors.teal),
+      appBar: AppBar(
+        title: const Text('Налаштування системи'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
       body: ListView(
+        padding: const EdgeInsets.all(16.0),
         children: [
+          // Перемикач теми (тут secondary працює, бо це SwitchListTile)
           SwitchListTile(
-            title: Text(isUk ? 'Темна тема екрана' : 'Dark Mode Theme'),
+            title: const Text('Темний режим інтерфейсу'),
+            subtitle: const Text('Адаптація екрана для зменшення втоми очей'),
+            value: rehabProvider.isDarkMode,
             secondary: const Icon(Icons.brightness_6),
-            value: provider.isDarkMode,
-            activeColor: Colors.teal,
-            onChanged: (val) => provider.toggleTheme(),
-          ),
-          ListTile(
-            title: Text(isUk ? 'Мова додатка (Language)' : 'App Language'),
-            subtitle: Text(isUk ? 'Українська' : 'English'),
-            secondary: const Icon(Icons.language),
-            trailing: DropdownButton<String>(
-              value: provider.locale,
-              underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: 'uk', child: Text('UA')),
-                DropdownMenuItem(value: 'en', child: Text('EN')),
-              ],
-              onChanged: (lang) {
-                if (lang != null) provider.setLocale(lang);
-              },
-            ),
+            onChanged: (bool value) {
+              rehabProvider.toggleTheme(value);
+            },
           ),
           const Divider(),
+          // Виправлено: змінено secondary на leading для звичайного ListTile
           ListTile(
-            title: Text(isUk ? 'Версія ПЗ' : 'App Version'),
-            subtitle: const Text('1.0.0 (Release Build 2026)'),
-            secondary: const Icon(Icons.info_outline),
-          )
+            leading: const Icon(Icons.language),
+            title: const Text('Мова додатка'),
+            subtitle: const Text('Українська (Системна)'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              // Майбутня логіка локалізації
+            },
+          ),
+          const Divider(),
+          // Виправлено: змінено secondary на leading для звичайного ListTile
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Про медичний конструктор'),
+            subtitle: const Text('Версія 1.0.0 (Реліз)'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              showAboutDialog(
+                context: context,
+                applicationName: 'Re_Hab_app',
+                applicationVersion: '1.0.0',
+                applicationLegalese: '© 2026 Розроблено для клінічної реабілітації.',
+              );
+            },
+          ),
         ],
       ),
     );
