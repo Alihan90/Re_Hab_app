@@ -67,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const GoniometryTab(),
 
       // ВКЛАДКА 3: ВПРАВИ ТА МЕТОДИКИ (Плейсхолдер для наступних кроків)
-      const _ExercisesTabPlaceholder(),
+      const ExercisesTab(),
 
       // ВКЛАДКА 4: НАЛАШТУВАННЯ (Плейсхолдер)
       const _SettingsTabPlaceholder(),
