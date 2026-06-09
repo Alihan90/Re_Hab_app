@@ -51,7 +51,6 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      // Виправлено: MainAxisAlignment.spaceBetween замість between
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Клінічний класифікатор МКХ-10', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -161,13 +160,13 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                 },
               ),
               const SizedBox(height: 32),
-              // Виправлено: прибрано аномальний style параметр з Padding, перенесено стиль у Text всередину
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
                   'Всі дані шифруються локально згідно з вимогами GDPR.',
+                  // Оце місце виправлено на TextAlign.center:
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
-                  textAlign: Center,
+                  textAlign: TextAlign.center,
                 ),
               ),
               ElevatedButton(
