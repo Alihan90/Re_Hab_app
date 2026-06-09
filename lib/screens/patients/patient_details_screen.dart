@@ -1,10 +1,10 @@
-import 'package:re_hab_app/models/rehab_patient.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rehab_provider.dart';
+import '../../data/database/app_database.dart';
 
 class PatientDetailsScreen extends StatefulWidget {
-  final RehabPatient patient;
+  final Patient patient;
 
   const PatientDetailsScreen({Key? key, required this.patient}) : super(key: key);
 
@@ -19,9 +19,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    // Виправлено: прибрано .join(), оскільки mfkCodes - це String
     _irpPlanController = TextEditingController(
-      text: 'Пов\'язані клінічні коди МКФ: ${widget.patient.irpPlan}\n\nРозклад реабілітаційного інтенсиву по днях:\n• День 1-5: Активація рухових стереотипів\n• День 6-10: Збільшення амплітуди рухів (ROM)',
+      text: widget.patient.irpPlan ?? 'Пов\'язані коди МКФ: не вказано\n\nРозклад реабілітації по днях:\n• День 1-5: Активація рухових стереотипів\n• День 6-10: Збільшення амплітуди рухів (ROM)',
     );
   }
 
@@ -44,7 +43,15 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             onPressed: () {
               setState(() {
                 if (_isEditing) {
-                  provider.updatePatientPlan(widget.patient.id, _irpPlanController.text);
+                  // Передаємо 3 обов'язкові параметри: пацієнт, цілі (smartGoals) та план (irpPlan)
+                  provider.updatePatientPlan(
+                    widget.patient, 
+                    widget.patient.smartGoals ?? '', 
+                    _irpPlanController.text
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('💾 Реабілітаційний план оновлено!')),
+                  );
                 }
                 _isEditing = !_isEditing;
               });
@@ -55,7 +62,24 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('🩺 Клінічний діагноз: ${widget.patient.diagnosis}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Text('📊 Код МКХ-10: ${widget.patient.icdCode}', style: const TextStyle(fontSize: 13)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text('📋 Програма реабілітації (ІРП):', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _irpPlanController,
               maxLines: 10,
