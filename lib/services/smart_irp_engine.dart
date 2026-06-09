@@ -73,7 +73,7 @@ class SmartIrpEngine {
     ClinicalScale(id: 'edacs', name: 'EDACS', fullName: 'Система класифікації здібностей до їжі та пиття', category: 'Педіатрія', ageGroup: 'Діти', minScore: 1, maxScore: 5, interpretation: 'Рівень безпеки ковтання та незалежності під час їди'),
 
     // --- ОРТОПЕДІЯ, ТРАВМАТОЛОГІЯ ТА АМПУТАЦІЇ ---
-    ClinicalScale(id: 'dash', name: 'DASH Index', fullName: 'Недієздатність верхньої кінцівки (плече, лікоть, кисть)', category: 'Ортопедія', ageGroup: 'Всі', minScore: 0, maxScore: 100, interpretation: '0: ідеальна функція кінцівки; 100: максимальна втрата працездатності'),
+    ClinicalScale(id: 'dash', name: 'DASH Index', fullName: 'Недієздатність верхньої кінцівки (плече, лікоть, кисть)', category: 'Ортопедія', ageGroup: 'Всі', minScore: 0, maxScore: 100, interpretation: '0: ідеальна функція кінцівки; 100: maximal втрата працездатності'),
     ClinicalScale(id: 'womac', name: 'WOMAC Osteoarthritis Index', fullName: 'Індекс артриту університетів Західного Онтаріо та МакМастер', category: 'Ортопедія', ageGroup: 'Дорослі', minScore: 0, maxScore: 96, interpretation: 'Оцінка болю, скутості та функціональних обмежень колінного/кульшового суглобів'),
     ClinicalScale(id: 'koos', name: 'KOOS', fullName: 'Шкала результатів травми та остеоартриту колінного суглоба', category: 'Ортопедія', ageGroup: 'Всі', minScore: 0, maxScore: 100, interpretation: '100: відсутність симптомів; 0: критичні проблеми з коліном'),
     ClinicalScale(id: 'hoos', name: 'HOOS', fullName: 'Шкала оцінки пошкоджень кульшового суглоба', category: 'Ортопедія', ageGroup: 'Всі', minScore: 0, maxScore: 100, interpretation: 'Розраховує профіль мобільності пацієнта після ендопротезування'),
@@ -115,7 +115,7 @@ class SmartIrpEngine {
     'T14.2': 'Перелом у неуточненій ділянці тіла (Стан після металоостеосинтезу кісток)',
   };
 
-  /// ДОДАНИЙ МЕТОД ДЛЯ ТЕСТІВ (викликає стару логіку)
+  /// МЕТОД ДЛЯ СУМІСНОСТІ З ЮНІТ-ТЕСТАМИ
   SmartPlan generatePlan({required String icdCode, required String category}) {
     return autoGeneratePlan(
       mkh10Codes: [icdCode],
@@ -134,6 +134,7 @@ class SmartIrpEngine {
   }) {
     String selectedCode = mkh10Codes.isNotEmpty ? mkh10Codes.first : 'Невідомо';
     
+    // Дефолтні заготовки під клінічні випадки
     String smartResult = '';
     String mfkResult = '';
     List<ExerciseItem> baseExercises = [];
@@ -144,7 +145,7 @@ class SmartIrpEngine {
           '🎯 **S (Specific):** Навчання експлуатації та управлінню міоелектричним/тяговим протезом лівого передпліччя, відновлення дворучного симетричного хвату в побуті.\n'
           '📊 **M (Measurable):** Зниження індексу недієздатності за шкалою DASH до <25 балів, успішне виконання тесту SHAP (9 базових маніпуляцій з предметами).\n'
           '💪 **A (Achievable):** Робота з ерготерапевтом, спрямована активованість м\'язових тригерів кукси передпліччя за допомогою БОЗ-тренажерів.\n'
-          '🏡 **R (Relevant):** Повне відновлення побутової незалежності: приготування їжі, застібання ґудзиків та блискавок без сторонньої допомоги.\n'
+          '🏡 **R (Relevant):** Повне восстановлення побутовой незалежності: приготування їжі, застібання ґудзиків та блискавок без сторонньої допомоги.\n'
           '⏱️ **T (Time-bound):** Досягти стійкої адаптації до протеза протягом $plannedDays днів реабілітаційного циклу.';
       
       mfkResult = 'b730 (Функції м\'язової сили), b760 (Функції контролю довільних рухів), d445 (Використання точних рухів кисті з протезом), d5 (Самообслуговування).';
@@ -177,7 +178,7 @@ class SmartIrpEngine {
         ExerciseItem(title: 'Високоінтенсивна імпульсна магнітотерапія (SIS) на корінці C5-C7 для зниження спастики', category: 'Магнітотерапія', dosage: '10 хв, частота 5-10 Гц'),
       ];
     }
-    // Загальний дефолтний ортопедичний план
+    // Загальний дефолтний ортопедичний план (якщо код інший)
     else {
       smartResult = 
           '🎯 **S (Specific):** Ліквідація больового синдрому в ураженій ділянці, відновлення фізіологічного об\'єму рухів (ROM).\n'
@@ -196,12 +197,13 @@ class SmartIrpEngine {
       ];
     }
 
-    // Розподіл вправ по днях
+    // Розподіл вправ по днях реабілітації із закладеною варіативністю
     Map<int, List<ExerciseItem>> schedule = {};
     final random = Random();
 
     for (int day = 1; day <= plannedDays; day++) {
       List<ExerciseItem> todaysExercises = [];
+      // Кожен день беремо 3-5 вправ із базового пулу клінічного випадку
       int exCount = 3 + random.nextInt(3); 
       for (int i = 0; i < exCount; i++) {
         var ex = baseExercises[random.nextInt(baseExercises.length)];
@@ -209,6 +211,7 @@ class SmartIrpEngine {
           todaysExercises.add(ex);
         }
       }
+      // Якщо раптом список порожній, додаємо гарантовано першу вправу
       if (todaysExercises.isEmpty) {
         todaysExercises.add(baseExercises.first);
       }
