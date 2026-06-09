@@ -51,6 +51,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      // Виправлено: MainAxisAlignment.spaceBetween замість between
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Клінічний класифікатор МКХ-10', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -75,7 +76,9 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                         itemBuilder: (ctx, index) {
                           final item = filteredCodes[index];
                           return ListTile(
-                            title: Text('${item.key} - ${item.value}'),
+                            title: Text(item.key, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(item.value),
+                            leading: const Icon(Icons.assignment_turned_in, color: Colors.blue),
                             onTap: () {
                               setState(() {
                                 _icdCodeController.text = item.key;
@@ -109,8 +112,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
             children: [
               TextFormField(
                 controller: _fullNameController,
-                decoration: const InputDecoration(labelText: 'ПІБ пацієнта', border: OutlineInputBorder()),
-                validator: (value) => value == null || value.isEmpty ? 'Вкажіть ПІБ' : null,
+                decoration: const InputDecoration(labelText: 'ПІБ пацієнта', border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)))),
+                validator: (value) => value == null || value.isEmpty ? 'Вкажіть ПІБ пацієнта' : null,
               ),
               const SizedBox(height: 16),
               Row(
@@ -119,23 +122,54 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     flex: 3,
                     child: TextFormField(
                       controller: _icdCodeController,
-                      decoration: const InputDecoration(labelText: 'Код МКХ-10', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'Код МКХ-10', border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)))),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     flex: 2,
-                    child: ElevatedButton(onPressed: _showIcd10Picker, child: const Text('Довідник')),
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.search),
+                      onPressed: _showIcd10Picker, 
+                      label: const Text('МКХ-10'),
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _diagnosisController,
-                decoration: const InputDecoration(labelText: 'Клінічний діагноз', border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: 'Клінічний діагноз', border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)))),
                 maxLines: 3,
               ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: Text('Дата народження: ${_selectedDate.day}.${_selectedDate.month}.${_selectedDate.year}'),
+                trailing: const Icon(Icons.calendar_today),
+                shape: RoundedRectangleBorder(side: const BorderSide(color: Colors.grey), borderRadius: BorderRadius.circular(12)),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate,
+                    firstDate: DateTime(1920),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    setState(() => _selectedDate = picked);
+                  }
+                },
+              ),
               const SizedBox(height: 32),
+              // Виправлено: прибрано аномальний style параметр з Padding, перенесено стиль у Text всередину
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'Всі дані шифруються локально згідно з вимогами GDPR.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                  textAlign: Center,
+                ),
+              ),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
@@ -148,7 +182,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     Navigator.pop(context);
                   }
                 },
-                child: const Text('Зберегти картку'),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                child: const Text('Зберегти картку пацієнта', style: TextStyle(fontSize: 16)),
               ),
             ],
           ),
