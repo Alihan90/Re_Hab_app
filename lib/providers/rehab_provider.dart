@@ -1,85 +1,158 @@
 import 'package:flutter/material.dart';
 import 'package:drift/drift.dart';
 import '../data/database/app_database.dart';
-import '../data/repositories/patient_repository.dart';
 
-class RehabProvider with ChangeNotifier {
-  final PatientRepository _repository;
-  List<Patient> _patients = [];
-  List<PatientVisit> _currentPatientVisits = [];
-  bool _isDarkMode = false;
+class RehabProvider extends ChangeNotifier {
+  final AppDatabase _db;
+  List<Patient> _allPatients = [];
+  
+  // Для підпису документів зберігаємо ID поточного авторизованого лікаря
+  int? _currentUserId;
+  String _currentUserFullName = "Неавторизований спеціаліст";
 
-  RehabProvider(this._repository) {
-    loadPatients();
+  RehabProvider(this._db) {
+    _listenToPatients();
   }
 
-  List<Patient> get patients => _patients;
-  List<Patient> get activePatients => _patients.where((p) => p.isActive).toList();
-  List<Patient> get inactivePatients => _patients.where((p) => !p.isActive).toList();
-  List<PatientVisit> get currentPatientVisits => _currentPatientVisits;
-  bool get isDarkMode => _isDarkMode;
+  // Стріми для постійного відстеження змін у базі даних
+  void _listenToPatients() {
+    _db.select(_db.patients).watch().listen((dynamicPatients) {
+      _allPatients = dynamicPatients;
+      notifyListeners();
+    });
+  }
 
-  void toggleTheme() {
-    _isDarkMode = !_isDarkMode;
+  // Гетери для розділення пацієнтів на екрані вкладки списку
+  List<Patient> get patients => _allPatients;
+  List<Patient> get activePatients => _allPatients.where((p) => p.status == 'Active').toList();
+  List<Patient> get archivedPatients => _allPatients.where((p) => p.status == 'Archived').toList();
+
+  int? get currentUserId => _currentUserId;
+  String get currentUserFullName => _currentUserFullName;
+
+  /// Встановлення поточного активного лікаря (викликається при логіні)
+  void setCurrentUser(int id, String name) {
+    _currentUserId = id;
+    _currentUserFullName = name;
     notifyListeners();
   }
 
-  Future<void> loadPatients() async {
-    _patients = await _repository.getAllPatients();
-    notifyListeners();
-  }
-
+  /// Додавання нової картки пацієнта (розширене полями скарг та очікувань)
   Future<void> addPatient({
     required String fullName,
     required String diagnosis,
     required String icdCode,
     required DateTime dateOfBirth,
+    String? complaints,
+    String? expectations,
+    int treatmentDays = 10,
   }) async {
-    final companion = PatientsCompanion(
-      fullName: Value(fullName),
-      diagnosis: Value(diagnosis),
-      icdCode: Value(icdCode),
-      dateOfBirth: Value(dateOfBirth),
-      isActive: const Value(true),
-    );
-    await _repository.insertPatient(companion);
-    await loadPatients();
+    await _db.into(_db.patients).insert(
+          PatientsCompanion.insert(
+            fullName: fullName,
+            diagnosis: diagnosis,
+            icdCode: icdCode,
+            dateOfBirth: dateOfBirth,
+            complaints: Value(complaints),
+            expectations: Value(expectations),
+            treatmentDays: Value(treatmentDays),
+            status: const Value('Active'),
+            createdByUserId: Value(_currentUserId),
+          ),
+        );
   }
 
-  Future<void> completeTreatment(Patient patient) async {
-    final updated = patient.copyWith(isActive: false);
-    await _repository.updatePatient(updated);
-    await loadPatients();
-  }
-
+  /// Оновлення плану реабілітації пацієнта (ідеально збігається з екраном деталей пацієнта)
   Future<void> updatePatientPlan(Patient patient, String smartGoals, String irpPlan) async {
-    final updated = patient.copyWith(smartGoals: Value(smartGoals), irpPlan: Value(irpPlan));
-    await _repository.updatePatient(updated);
-    await loadPatients();
+    await (_db.update(_db.patients)..where((t) => t.id.equals(patient.id))).write(
+      PatientsCompanion(
+        smartGoals: Value(smartGoals),
+        irpPlan: Value(irpPlan),
+      ),
+    );
   }
 
-  Future<void> loadVisits(int patientId) async {
-    _currentPatientVisits = await _repository.getVisitsForPatient(patientId);
+  /// Зміна клінічного статусу картки (Переведення в Архів або повернення в Активні)
+  Future<void> updatePatientStatus(int patientId, String newStatus) async {
+    await (_db.update(_db.patients)..where((t) => t.id.equals(patientId))).write(
+      PatientsCompanion(
+        status: Value(newStatus),
+      ),
+    );
+  }
+
+  /// Повне видалення картки з бази даних (якщо лікар підтвердив видалення)
+  Future<void> deletePatientPermanently(int patientId) async {
+    await (_db.delete(_db.patients)..where((t) => t.id.equals(patientId))).go();
+  }
+
+  // ==========================================
+  // РОБОТА ЗІ ШКАЛАМИ ТА ОЦІНЮВАННЯМ
+  // ==========================================
+
+  /// Отримання історії тестів конкретного пацієнта для побудови графіків динаміки
+  Future<List<PatientTest>> getTestsForPatient(int patientId) async {
+    return await (_db.select(_db.patientTests)
+          ..where((t) => t.patientId.equals(patientId))
+          ..orderBy([(t) => OrderingTerm(expression: t.testDate, mode: OrderingMode.desc)]))
+        .get();
+  }
+
+  /// Збереження проведеного інтерактивного тесту
+  Future<void> savePatientTest({
+    required int patientId,
+    required String scaleId,
+    required String scaleName,
+    required double totalScore,
+    required String interpretation,
+  }) async {
+    await _db.into(_db.patientTests).insert(
+          PatientTestsCompanion.insert(
+            patientId: patientId,
+            scaleId: scaleId,
+            scaleName: scaleName,
+            totalScore: totalScore,
+            interpretation: interpretation,
+            testDate: DateTime.now(),
+            conductedByUserId: Value(_currentUserId),
+          ),
+        );
     notifyListeners();
   }
 
-  Future<void> addVisit({
-    required int patientId,
-    required String notes,
-    required String assessmentResults,
-  }) async {
-    final companion = PatientVisitsCompanion(
-      patientId: Value(patientId),
-      visitDate: Value(DateTime.now()),
-      notes: Value(notes),
-      assessmentResults: Value(assessmentResults),
-    );
-    await _repository.insertVisit(companion);
-    await loadVisits(patientId);
+  // ==========================================
+  // РОБОТА З ГОНІОМЕТРІЄЮ
+  // ==========================================
+
+  /// Отримання історії замірів кутів суглобів для картки пацієнта
+  Future<List<GoniometryMeasurement>> getGoniometryForPatient(int patientId) async {
+    return await (_db.select(_db.goniometryMeasurements)
+          ..where((t) => t.patientId.equals(patientId))
+          ..orderBy([(t) => OrderingTerm(expression: t.measurementDate, mode: OrderingMode.desc)]))
+        .get();
   }
 
-  Future<void> deletePatient(int id) async {
-    await _repository.deletePatient(id);
-    await loadPatients();
+  /// Збереження нового вимірювання суглоба
+  Future<void> saveGoniometryMeasurement({
+    required int patientId,
+    required String jointName,
+    required String movementType,
+    required String side,
+    required double measuredAngle,
+    required double deficitDegrees,
+  }) async {
+    await _db.into(_db.goniometryMeasurements).insert(
+          GoniometryMeasurementsCompanion.insert(
+            patientId: patientId,
+            jointName: jointName,
+            movementType: movementType,
+            side: side,
+            measuredAngle: measuredAngle,
+            deficitDegrees: deficitDegrees,
+            measurementDate: DateTime.now(),
+            conductedByUserId: Value(_currentUserId),
+          ),
+        );
+    notifyListeners();
   }
 }
