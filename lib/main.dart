@@ -1,50 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'data/database/app_database.dart';
-import 'data/repositories/patient_repository.dart';
 import 'providers/rehab_provider.dart';
-import 'screens/home/home_screen.dart';
+import 'providers/auth_provider.dart';
+import 'providers/ui_state_provider.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/main_navigation_hub.dart';
 
 void main() {
-  // Гарантуємо ініціалізацію системних каналів Flutter перед запуском БД
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Ініціалізуємо єдиний екземпляр локальної бази даних Drift
-  final AppDatabase database = AppDatabase();
   
-  // Передаємо базу даних в абстрагований репозиторій
-  final PatientRepository patientRepository = LocalPatientRepository(database);
+  // Ініціалізуємо єдиний екземпляр бази даних Drift
+  final database = AppDatabase();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider<RehabProvider>(
-          create: (_) => RehabProvider(patientRepository),
-        ),
+        ChangeNotifierProvider(create: (_) => UiStateProvider()),
+        ChangeNotifierProvider(create: (_) => RehabProvider(database)),
+        ChangeNotifierProvider(create: (_) => AuthProvider(database)),
       ],
-      child: const RehabilitationApp(),
+      child: const ReHabApp(),
     ),
   );
 }
 
-class RehabilitationApp extends StatelessWidget {
-  const RehabilitationApp({Key? key}) : super(key: key);
+class ReHabApp extends StatelessWidget {
+  const ReHabApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<RehabProvider>(context);
+    final uiState = Provider.of<UiStateProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context);
 
     return MaterialApp(
-      title: 'Re_Hab_app',
+      title: 'ReHab Професіонал',
       debugShowCheckedModeBanner: false,
+      
+      // Динамічне підключення темної/світлої теми з провайдера
+      themeMode: uiState.themeMode,
+      locale: uiState.locale,
+      
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.teal,
-          brightness: provider.isDarkMode ? Brightness.dark : Brightness.light,
-        ),
+        colorSchemeSeed: Colors.blue,
+        brightness: Brightness.light,
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 2),
       ),
-      home: const HomeScreen(),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.blue,
+        brightness: Brightness.dark,
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 2),
+      ),
+
+      // Розумна перевірка авторизації при запуску
+      home: authProvider.isAuthenticated 
+          ? const MainNavigationHub() 
+          : const LoginScreen(),
     );
   }
 }
