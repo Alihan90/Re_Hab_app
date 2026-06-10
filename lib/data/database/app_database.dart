@@ -1,42 +1,99 @@
+import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'dart:io';
 
 part 'app_database.g.dart';
 
+/// Таблиця користувачів (лікарів/реабілітологів) для багатокористувацького режиму
+class Users extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get username => text().customConstraint('UNIQUE')();
+  TextColumn get passwordHash => text()();
+  TextColumn get fullName => text()();
+  TextColumn get role => text().withDefault(const Constant('Therapist'))(); // Наприклад: Therapist, Admin
+}
+
+/// Модернізована таблиця пацієнтів із клінічними полями
 class Patients extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get fullName => text()(); // Один ПІБ для будь-якої розкладки клавіатури
-  TextColumn get diagnosis => text()(); // Один опис діагнозу
-  TextColumn get icdCode => text()();   // Код МКХ-10 для ручного введення
-  DateTimeColumn get dateOfBirth => dateTime()(); // Повна дата народження
-  BoolColumn get isActive => boolean().withDefault(const Constant(true))(); // Статус для Архіву
+  TextColumn get fullName => text()();
+  TextColumn get diagnosis => text()();
+  TextColumn get icdCode => text()();
+  DateTimeColumn get dateOfBirth => dateTime()();
   TextColumn get smartGoals => text().nullable()();
   TextColumn get irpPlan => text().nullable()();
+  
+  // Нові клінічні поля за запитом:
+  TextColumn get complaints => text().nullable()();     // Скарги пацієнта
+  TextColumn get expectations => text().nullable()();   // Очікування від реабілітації
+  IntColumn get treatmentDays => integer().withDefault(const Constant(10))(); // Кількість днів ІРП
+  TextColumn get status => text().withDefault(const Constant('Active'))();     // Active або Archived
+  
+  // Зв'язок з користувачем, який створив або веде картку
+  IntColumn get createdByUserId => integer().nullable().references(Users, #id)();
 }
 
-class PatientVisits extends Table {
+/// Таблиця для збереження проведених тестувань за шкалами (Динаміка пацієнта)
+class PatientTests extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get patientId => integer().references(Patients, #id, onDelete: KeyAction.cascade)();
-  DateTimeColumn get visitDate => dateTime()();
-  TextColumn get notes => text()();
-  TextColumn get assessmentResults => text()(); // Результати тестування за клінічними шкалами
+  TextColumn get scaleId => text()();          // Ідентифікатор шкали (напр. 'bbs', 'mas')
+  TextColumn get scaleName => text()();        // Назва шкали для швидкого виведення
+  RealColumn get totalScore => real()();       // Отриманий бал
+  TextColumn get interpretation => text()();   // Автоматична клінічна інтерпретація результату
+  DateTimeColumn get testDate => dateTime()(); // Дата проведення тесту
+  IntColumn get conductedByUserId => integer().nullable().references(Users, #id)(); // Хто проводив
 }
 
-@DriftDatabase(tables: [Patients, PatientVisits])
+/// Таблиця для збереження історії вимірювань гоніометрії
+class GoniometryMeasurements extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get patientId => integer().references(Patients, #id, onDelete: KeyAction.cascade)();
+  TextColumn get jointName => text()();        // Назва суглоба (Колінний, Ліктьовий тощо)
+  TextColumn get movementType => text()();     // Тип руху (Згинання, Розгинання)
+  TextColumn get side => text()();             // Сторона (Права, Ліва)
+  RealColumn get measuredAngle => real()();    // Виміряний кут у градусах
+  RealColumn get deficitDegrees => real()();   // Розрахований дефіцит відносно норми
+  DateTimeColumn get measurementDate => dateTime()(); // Дата вимірювання
+  IntColumn get conductedByUserId => integer().nullable().references(Users, #id)(); // Хто вимірював
+}
+
+@DriftDatabase(tables: [Users, Patients, PatientTests, GoniometryMeasurements])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2; // Збільшуємо версію схеми, оскільки структура розширилась
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          // Автоматично створюємо нові таблиці та додаємо колонки, якщо оновлюємося з версії 1
+          await m.createTable(users);
+          await m.addColumn(patients, patients.complaints);
+          await m.addColumn(patients, patients.expectations);
+          await m.addColumn(patients, patients.treatmentDays);
+          await m.addColumn(patients, patients.status);
+          await m.addColumn(patients, patients.createdByUserId);
+          await m.createTable(patientTests);
+          await m.createTable(goniometryMeasurements);
+        }
+      },
+    );
+  }
 }
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'rehab_db.sqlite'));
+    final file = File(p.join(dbFolder.path, 'rehab_app_secure.db'));
     return NativeDatabase.createInBackground(file);
   });
 }
