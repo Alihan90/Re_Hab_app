@@ -4,6 +4,7 @@ import '../../providers/rehab_provider.dart';
 import '../../services/smart_irp_engine.dart';
 import '../../services/pdf_export_service.dart';
 import '../../models/clinical_models.dart';
+import '../../data/repositories/clinical_repository.dart'; // Додано для доступу до всіх шкал
 import '../assessment/interactive_assessment_screen.dart';
 
 class PatientDetailsScreen extends StatefulWidget {
@@ -202,7 +203,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> with Single
             ),
           ),
 
-          //ОСНОВНИЙ КОНТЕНТ ВКЛАДОК
+          // ОСНОВНИЙ КОНТЕНТ ВКЛАДОК
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -315,35 +316,42 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> with Single
                 ListView(
                   padding: const EdgeInsets.all(14),
                   children: [
-                    // Блок запуску інтерактивного тестування
+                    // Модернізований блок динамічного запуску тестувань
                     const Text('Проведення клінікометричних тестів:', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
+                    const SizedBox(height: 10),
+                    
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ClinicalRepository.allScales.map((scale) {
+                        return SizedBox(
+                          width: (MediaQuery.of(context).size.width / 2) - 18, // Розрахунок під чисту адаптивну сітку в 2 колонки
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey.shade700, foregroundColor: Colors.white),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueGrey.shade700,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
                             onPressed: () => Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => InteractiveAssessmentScreen(patientId: widget.patient.id.toString(), scaleType: 'berg')),
+                              MaterialPageRoute(
+                                builder: (context) => InteractiveAssessmentScreen(
+                                  patientId: widget.patient.id.toString(),
+                                  scaleId: scale.id, // Виклик через новий універсальний ідентифікатор шкал
+                                ),
+                              ),
                             ),
-                            child: const Text('Тест Берга (Баланс)', style: TextStyle(fontSize: 12)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey.shade700, foregroundColor: Colors.white),
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => InteractiveAssessmentScreen(patientId: widget.patient.id.toString(), scaleType: 'barthel')),
+                            child: Text(
+                              scale.name,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                             ),
-                            child: const Text('Індекс Бартел (АДЛ)', style: TextStyle(fontSize: 12)),
                           ),
-                        ),
-                      ],
+                        );
+                      }).toList(),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     // Результати тестувань у картці пацієнта
                     const Text('Історія тестувань за шкалами:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
