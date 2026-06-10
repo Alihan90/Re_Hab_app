@@ -1,13 +1,20 @@
 import 'dart:convert';
 
-/// Модель реабілітаційної вправи
+/// Тип клінічної шкали або тесту
+enum ScaleType {
+  multiItem,    // Багатопунктові (Берг, Бартел, де кожен пункт має свої бали)
+  selectRow,    // Вибір одного рядка з повним описом стану (RASS, Ешворт)
+  vitalsProtocol // Фізіологічний протокол з замірами пульсу та тиску (Ортостатичний, Тілт)
+}
+
+/// Модель реабілітаційної вправи (залишається незмінною)
 class RehabExercise {
   final String id;
   final String name;
-  final String category; // Нейро, Орто, Кардіо, Загальна
+  final String category;
   final String description;
-  final String dosage; // Наприклад: "3 підходи по 10 разів"
-  final bool isCustom; // Чи додана лікарем вручну
+  final String dosage;
+  final bool isCustom;
 
   const RehabExercise({
     required this.id,
@@ -41,11 +48,11 @@ class RehabExercise {
   }
 }
 
-/// Модель одного пункту (питання) клінічної шкали
+/// Модель одного пункту для шкал типу multiItem або selectRow
 class ScaleItem {
   final int id;
-  final String instruction; // Що зробити пацієнту / Нагляд
-  final Map<int, String> scoreOptions; // Бали та їх розшифровка (напр: {0: 'Не здатний', 1: 'Потребує допомоги'})
+  final String instruction;
+  final Map<int, String> scoreOptions; // Для RASS ключі можуть бути і відʼємними (-5...4)
 
   const ScaleItem({
     required this.id,
@@ -54,40 +61,61 @@ class ScaleItem {
   });
 }
 
-/// Модель результату проведеного тестування
+/// Мета-опис клінічної шкали для динамічного рендерингу UI
+class ClinicalScaleMeta {
+  final String id;
+  final String name;
+  final ScaleType type;
+  final String description;
+  final List<ScaleItem> items;
+
+  const ClinicalScaleMeta({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.description,
+    required this.items,
+  });
+}
+
+/// Модель результату проведеного тестування (підтримує збереження будь-яких типів тестів)
 class AssessmentResult {
+  final String scaleId;
   final String scaleName;
   final DateTime date;
   final int totalScore;
   final String interpretation;
-  final Map<int, int> itemScores; // Попунктні оцінки для аналізу динаміки
+  final Map<String, String> dynamicDetails; // Для збереження сирого вводу (напр. "АТ_лежачи: 120/80")
 
   const AssessmentResult({
+    required this.scaleId,
     required this.scaleName,
     required this.date,
     required this.totalScore,
     required this.interpretation,
-    required this.itemScores,
+    this.dynamicDetails = const {},
   });
 
   String toJson() {
     return jsonEncode({
+      'scaleId': scaleId,
       'scaleName': scaleName,
       'date': date.toIso8601String(),
       'totalScore': totalScore,
       'interpretation': interpretation,
-      'itemScores': itemScores.map((key, value) => MapEntry(key.toString(), value)),
+      'dynamicDetails': dynamicDetails,
     });
   }
 
   factory AssessmentResult.fromJson(String source) {
     final map = jsonDecode(source);
     return AssessmentResult(
+      scaleId: map['scaleId'] ?? '',
       scaleName: map['scaleName'],
       date: DateTime.parse(map['date']),
       totalScore: map['totalScore'],
       interpretation: map['interpretation'],
-      itemScores: (map['itemScores'] as Map).map((key, value) => MapEntry(int.parse(key), value as int)),
+      dynamicDetails: Map<String, String>.from(map['dynamicDetails'] ?? {}),
     );
   }
 }
