@@ -40,7 +40,7 @@ jobs:
 
     # 6. Автоматична генерація коду для бази даних Drift
     - name: Run Drift code generation
-      run: dart run build_runner build --delete-conflicting-outputs
+      run: flutter pub run build_runner build --delete-conflicting-outputs
 
     # 7. Запуск тесту
     - name: Run Unit Tests
