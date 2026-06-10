@@ -6,12 +6,12 @@ import '../../providers/rehab_provider.dart';
 
 class InteractiveAssessmentScreen extends StatefulWidget {
   final String patientId;
-  final String scaleType; // 'berg' або 'barthel'
+  final String scaleId;
 
   const InteractiveAssessmentScreen({
     Key? key,
     required this.patientId,
-    required this.scaleType,
+    required this.scaleId,
   }) : super(key: key);
 
   @override
@@ -19,209 +19,302 @@ class InteractiveAssessmentScreen extends StatefulWidget {
 }
 
 class _InteractiveAssessmentScreenState extends State<InteractiveAssessmentScreen> {
-  // Мапа для збереження обраних балів: { itemId: selectedScore }
-  final Map<int, int> _selectedScores = {};
+  late ClinicalScaleMeta _scaleMeta;
+  final Map<int, int> _selectedMultiScores = {}; // Для багатопунктових шкал (Берг/Бартел)
+  int _singleSelectedScore = 0; // Для одновимірних шкал (RASS, Ешворт)
+
+  // Контролери для фізіологічних замірів (Ортостатичний / Тілт тест)
+  final _hrLyingController = TextEditingController(text: '70');
+  final _sysLyingController = TextEditingController(text: '120');
+  final _diaLyingController = TextEditingController(text: '80');
   
-  late List<ScaleItem> _scaleItems;
-  late String _scaleName;
+  final _hrStandingController = TextEditingController(text: '95');
+  final _sysStandingController = TextEditingController(text: '105');
+  final _diaStandingController = TextEditingController(text: '70');
 
   @override
   void initState() {
     super.initState();
-    // Ініціалізуємо контент залежно від обраного типу шкали
-    if (widget.scaleType == 'berg') {
-      _scaleItems = ClinicalRepository.bergScale;
-      _scaleName = 'Шкала балансу Берга (BBS)';
+    // Знаходимо метадані потрібної шкали з нашого репозиторію
+    _scaleMeta = ClinicalRepository.allScales.firstWhere((s) => s.id == widget.scaleId);
+
+    // Ініціалізуємо базові бали
+    if (_scaleMeta.type == ScaleType.multiItem) {
+      for (var item in _scaleMeta.items) {
+        _selectedMultiScores[item.id] = item.scoreOptions.keys.first;
+      }
+    } else if (_scaleMeta.type == ScaleType.selectRow) {
+      _singleSelectedScore = _scaleMeta.items.first.scoreOptions.keys.first;
+    }
+  }
+
+  @override
+  void dispose() {
+    _hrLyingController.dispose();
+    _sysLyingController.dispose();
+    _diaLyingController.dispose();
+    _hrStandingController.dispose();
+    _sysStandingController.dispose();
+    _diaStandingController.dispose();
+    super.dispose();
+  }
+
+  /// Розрахунок результатів на льоту для відображення у верхній панелі
+  int get _calculatedScore {
+    if (_scaleMeta.type == ScaleType.multiItem) {
+      return _selectedMultiScores.values.fold(0, (sum, val) => sum + val);
+    }
+    if (_scaleMeta.type == ScaleType.selectRow) {
+      return _singleSelectedScore;
+    }
+    return 0; // Для фізіологічних тестів розрахунок йде через метод репозиторію при збереженні
+  }
+
+  String get _calculatedInterpretation {
+    if (_scaleMeta.type == ScaleType.selectRow) {
+      return ClinicalRepository.interpretSingleRow(_scaleMeta.id, _singleSelectedScore);
+    }
+    if (_scaleMeta.type == ScaleType.multiItem) {
+      return _scaleMeta.id == 'berg' 
+          ? 'Загальний підрахунок балів Берга: $_calculatedScore із 56 можливих.'
+          : 'Загальний індекс Бартел: $_calculatedScore балів.';
+    }
+    return "Протокол вегетативного реагування.";
+  }
+
+  /// Метод обробки та збереження тестування пацієнта
+  void _submitAssessment() {
+    int finalScore = 0;
+    String finalInterpretation = "";
+    Map<String, String> details = {};
+
+    if (_scaleMeta.type == ScaleType.vitalsProtocol) {
+      // Математичний прорахунок ортостатичної проби
+      final res = ClinicalRepository.calculateVitalsTest(
+        testId: _scaleMeta.id,
+        hrLying: int.tryParse(_hrLyingController.text) ?? 70,
+        sysLying: int.tryParse(_sysLyingController.text) ?? 120,
+        diaLying: int.tryParse(_diaLyingController.text) ?? 80,
+        hrStanding: int.tryParse(_hrStandingController.text) ?? 95,
+        sysStanding: int.tryParse(_sysStandingController.text) ?? 105,
+        diaStanding: int.tryParse(_diaStandingController.text) ?? 70,
+      );
+      finalScore = res['score'];
+      finalInterpretation = res['text'];
+      details = {
+        'Lying': '${_sysLyingController.text}/${_diaLyingController.text} мм.рт.ст, ЧСС: ${_hrLyingController.text}',
+        'Standing': '${_sysStandingController.text}/${_diaStandingController.text} мм.рт.ст, ЧСС: ${_hrStandingController.text}',
+      };
     } else {
-      _scaleItems = ClinicalRepository.barthelIndex;
-      _scaleName = 'Модифікований Індекс Бартел';
+      finalScore = _calculatedScore;
+      finalInterpretation = _calculatedInterpretation;
     }
 
-    // За замовчуванням виставляємо початкові бали (0), щоб уникнути помилок пустих значень
-    for (var item in _scaleItems) {
-      _selectedScores[item.id] = item.scoreOptions.keys.first;
-    }
-  }
-
-  /// Динамічний підрахунок загального бала
-  int get _totalScore {
-    return _selectedScores.values.fold(0, (sum, score) => sum + score);
-  }
-
-  /// Отримання інтерпретації в реальному часі
-  String get _currentInterpretation {
-    if (widget.scaleType == 'berg') {
-      return ClinicalRepository.interpretBerg(_totalScore);
-    } else {
-      return ClinicalRepository.interpretBarthel(_totalScore);
-    }
-  }
-
-  /// Метод збереження результатів тестування в провайдер
-  void _saveAssessmentResult() {
-    final result = AssessmentResult(
-      scaleName: _scaleName,
+    final assessmentResult = AssessmentResult(
+      scaleId: _scaleMeta.id,
+      scaleName: _scaleMeta.name,
       date: DateTime.now(),
-      totalScore: _totalScore,
-      interpretation: _currentInterpretation,
-      itemScores: Map<int, int>.from(_selectedScores),
+      totalScore: finalScore,
+      interpretation: finalInterpretation,
+      dynamicDetails: details,
     );
 
     Provider.of<RehabProvider>(context, listen: false).saveAssessment(
       widget.patientId,
-      result,
+      assessmentResult,
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('✅ Результат $_scaleName успішно внесено до картки пацієнта!'),
-        backgroundColor: Colors.green,
-      ),
+      SnackBar(content: Text('✅ Результат тесту "${_scaleMeta.name}" зафіксовано в картці!'), backgroundColor: Colors.green),
     );
-
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_scaleName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-      ),
+      appBar: AppBar(title: Text(_scaleMeta.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
       body: Column(
         children: [
-          // Інформаційна панель поточного результату (завжди зверху)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
+          // ВЕРХНЯ ДІАГНОСТИЧНА СТАТУС-ПАНЕЛЬ (Не рендериться для сирих фізіологічних тестів)
+          if (_scaleMeta.type != ScaleType.vitalsProtocol)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
               color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
-              border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Поточний бал: $_calculatedScore', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueDark)),
+                  const SizedBox(height: 4),
+                  Text('Попередній висновок: $_calculatedInterpretation', style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+                ],
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Сумарний клінічний бал:',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade700,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$_totalScore балів',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Інтерпретація МОЗ: $_currentInterpretation',
-                  style: TextStyle(
-                    fontSize: 13, 
-                    fontWeight: FontWeight.w500, 
-                    color: Colors.blueGrey.shade800,
-                    fontStyle: FontStyle.italic
-                  ),
-                ),
-              ],
-            ),
-          ),
 
-          // Покроковий список тестових завдань та критеріїв оцінки
+          // АДАПТИВНЕ ТІЛО ТЕСТУВАННЯ Згідно з ТИПОМ ШКАЛИ
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _scaleItems.length,
-              itemBuilder: (context, index) {
-                final item = _scaleItems[index];
-                return Card(
-                  elevation: 3,
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Номер та опис рухової дії пацієнта
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              radius: 12,
-                              backgroundColor: Colors.blueGrey.shade100,
-                              child: Text('${index + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                item.instruction,
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 20),
-                        
-                        // Варіанти оцінювання у вигляді RadioListTile
-                        Column(
-                          children: item.scoreOptions.entries.map((option) {
-                            final scoreValue = option.key;
-                            final scoreDescription = option.value;
-                            
-                            return RadioListTile<int>(
-                              title: Text(
-                                '[$scoreValue балів] $scoreDescription',
-                                style: const TextStyle(fontSize: 13, height: 1.3),
-                              ),
-                              value: scoreValue,
-                              groupValue: _selectedScores[item.id],
-                              dense: true,
-                              activeColor: Colors.blue.shade700,
-                              contentPadding: EdgeInsets.zero,
-                              onChanged: (int? newValue) {
-                                if (newValue != null) {
-                                  setState(() {
-                                    _selectedScores[item.id] = newValue;
-                                  });
-                                }
-                              },
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(14),
+              child: _buildAdaptiveTestBody(),
             ),
           ),
 
-          // Нижня кнопка збереження тестування
+          // ФІКСУЮЧА КНОПКА ЗБЕРЕЖЕННЯ
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(14.0),
             child: SizedBox(
               width: double.infinity,
-              height: 52,
+              height: 50,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.save_alt),
-                label: const Text('Фіксувати результат у медичну карту', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _saveAssessmentResult,
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Записати тест у медичну картку', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: _submitAssessment,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Роутер побудови UI під кожну медичну задачу
+  Widget _buildAdaptiveTestBody() {
+    // ВАРІАНТ А: ШКАЛА ОДНОГО РЯДКА (RASS, ЕШВОРТ) — Величезні детальні чек-рядки
+    if (_scaleMeta.type == ScaleType.selectRow) {
+      final item = _scaleMeta.items.first;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(item.instruction, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+          const SizedBox(height: 12),
+          ...item.scoreOptions.entries.map((entry) {
+            final isSelected = _singleSelectedScore == entry.key;
+            return Card(
+              elevation: isSelected ? 3 : 1,
+              color: isSelected ? Colors.blue.shade50 : null,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: isSelected ? Colors.blue : Colors.grey.shade300, width: isSelected ? 1.5 : 1),
+              ),
+              child: RadioListTile<int>(
+                value: entry.key,
+                groupValue: _singleSelectedScore,
+                activeColor: Colors.blue.shade800,
+                title: Text(entry.value, style: const TextStyle(fontSize: 13, height: 1.4, fontWeight: FontWeight.w500)),
+                onChanged: (val) {
+                  if (val != null) setState(() => _singleSelectedScore = val);
+                },
+              ),
+            );
+          }).toList(),
+        ],
+      );
+    }
+
+    // ВАРІАНТ Б: ПРОТОКОЛ ЗАМІРІВ СУДИННИХ РЕАКЦІЙ (ОРТОСТАТИЧНИЙ ТА ТІЛТ ТЕСТИ)
+    if (_scaleMeta.type == ScaleType.vitalsProtocol) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_scaleMeta.description, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+          const SizedBox(height: 16),
+          
+          _buildVitalsCard(
+            title: 'ФАЗА 1: Кліностаз (Пацієнт лежить на спині у спокої 5 хв)',
+            hrController: _hrLyingController,
+            sysController: _sysLyingController,
+            diaController: _diaLyingController,
+            accentColor: Colors.teal,
+          ),
+          const SizedBox(height: 16),
+          
+          _buildVitalsCard(
+            title: 'ФАЗА 2: Ортостаз (Пацієнт впевнено стоїть, замір на 1-3 хв)',
+            hrController: _hrStandingController,
+            sysController: _sysStandingController,
+            diaController: _diaStandingController,
+            accentColor: Colors.deepOrange,
+          ),
+        ],
+      );
+    }
+
+    // ВАРІАНТ В: БАГАТОПУНКТОВІ ОПИТУВАЛЬНИКИ (БЕРГ / БАРТЕЛ / FIM)
+    return Column(
+      children: _scaleMeta.items.map((item) {
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.instruction, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                const Divider(),
+                ...item.scoreOptions.entries.map((opt) => RadioListTile<int>(
+                      title: Text(opt.value, style: const TextStyle(fontSize: 13)),
+                      value: opt.key,
+                      groupValue: _selectedMultiScores[item.id],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedMultiScores[item.id] = val);
+                      },
+                    )),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// Допоміжний віджет картки для зняття фізіологічних показників
+  Widget _buildVitalsCard({
+    required String title,
+    required TextEditingController hrController,
+    required TextEditingController sysController,
+    required TextEditingController diaController,
+    required Color accentColor,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: accentColor.withOpacity(0.3))),
+      child: Padding(
+        padding: const EdgeInsets.all(14.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: accentColor)),
+            const Divider(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: hrController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'ЧСС (уд/хв)', border: OutlineInputBorder(), dense: true),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: sysController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'САТ (сист)', border: OutlineInputBorder(), dense: true),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: diaController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'ДАТ (діаст)', border: OutlineInputBorder(), dense: true),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
