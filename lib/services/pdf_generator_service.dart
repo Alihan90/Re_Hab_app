@@ -1,15 +1,51 @@
+import 'dart:io';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
 import '../data/models/patient.dart';
 
 class PdfGeneratorService {
   
+  /// Генерує бінарний PDF-документ на основі текстової матриці звіту
+  Future<File> generateAndSavePdf(Patient patient) async {
+    final pdf = pw.Document();
+    final reportText = generateFullClinicalReport(patient);
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (pw.Context context) {
+          return [
+            pw.Text(
+              reportText,
+              style: pw.TextStyle(
+                font: pw.Font.courier(), // Гарантує збереження структури таблиць та символів ===
+                fontSize: 9,
+                lineSpacing: 1.2,
+              ),
+            ),
+          ];
+        },
+      ),
+    );
+
+    // Зберігаємо у директорію документів додатку
+    final output = await getApplicationDocumentsDirectory();
+    final fileName = "IRP_${patient.nameEn.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf";
+    final file = File("${output.path}/$fileName");
+    
+    await file.writeAsBytes(await pdf.save());
+    return file;
+  }
+
   /// Генерує структуровану текстову матрицю звіту за стандартами медичних протоколів МОЗ України.
-  /// Цей згенерований рядок передається у плагін відображення/друку чи безпосередньо у бінарний PDF-пакет.
   String generateFullClinicalReport(Patient patient) {
     final buffer = StringBuffer();
 
     buffer.writeln("=================================================================================");
     buffer.writeln("                      МІНІСТЕРСТВО ОХОРОНИ ЗДОРОВ'Я УКРАЇНИ                      ");
-    buffer.writeln("               ІНДИВІДУАЛЬНА ПРОГРАМА РЕАБІЛІТАЦІЇ ПАЦІЄНТА (ІРП)               ");
+    buffer.writeln("               ІНДИВІДУАЛЬНА ПРОГРАМА РЕАБІЛІТАЦІЇ ПАЦІЄНТА (ІРП)                ");
     buffer.writeln("=================================================================================");
     buffer.writeln("ДАТА ФОРМУВАННЯ ДОКУМЕНТА: ${DateTime.now().toLocal().toString().split(' ')[0]}");
     buffer.writeln("\n1. ПАСПОРТНА ЧАСТИНА КАРТКИ ПАЦІЄНТА:");
@@ -47,7 +83,7 @@ class PdfGeneratorService {
     buffer.writeln("\n5. ОБ'ЄКТИВНИЙ СТАТУС - ДИНАМІКА МЕДИЧНИХ ШКАЛ ТА МІЖНАРОДНИХ ТЕСТІВ:");
     buffer.writeln("---------------------------------------------------------------------------------");
     if (patient.scaleHistory.isEmpty) {
-      buffer.writeln(" Первинні та повторні тестування за функціональними шкалами не проводились.");
+      buffer.writeln(" Первинні та повторні тестування за funkціональними шкалами не проводились.");
     } else {
       for (var point in patient.scaleHistory) {
         buffer.writeln("• [${point.date.toString().split(' ')[0]}] Шкала: ${point.scaleNameUk}");
