@@ -11,8 +11,31 @@ class SmartIrpPlan {
 }
 
 class SmartIrpEngine {
+  
+  /// МЕТОД ДЛЯ СУМІСНОСТІ З ЮНІТ-ТЕСТАМИ (test/irp_engine_test.dart)
+  /// Приймає параметри з тесту та повертає текстове представлення плану
+  String generatePlan({required String icdCode, required String category}) {
+    final plan = generate(
+      icdCode: icdCode,
+      diagnosis: category, // Використовуємо категорію як частину діагнозу для аналізу
+      treatmentDays: 10,   // Базовий дефолтний термін для тестів
+    );
+
+    final buffer = StringBuffer();
+    buffer.writeln("=== АВТОМАТИЧНО ЗГЕНЕРОВАНИЙ ПЛАН РЕАБІЛІТАЦІЇ ===");
+    buffer.writeln("Код МКХ-10: $icdCode | Категорія: $category");
+    buffer.writeln("\nЦІЛІ SMART:\n${plan.smartGoals}");
+    buffer.writeln("\nКЛІНІЧНІ ЗАСТЕРЕЖЕННЯ:\n${plan.clinicalPrecautions}");
+    buffer.writeln("\nПРОТОКОЛ ПО ДНЯХ (ПЕРШІ ДНІ):");
+    if (plan.dailyActivities.isNotEmpty) {
+      buffer.writeln(plan.dailyActivities.first);
+    }
+    
+    return buffer.toString();
+  }
+
   /// Головний метод генерації ІРП на основі клінічних даних
-  static SmartIrpPlan generate({
+  SmartIrpPlan generate({
     required String icdCode,
     required String diagnosis,
     required int treatmentDays,
@@ -24,14 +47,13 @@ class SmartIrpEngine {
     final cleanDiagnosis = diagnosis.toLowerCase();
 
     // 1. ВИЗНАЧЕННЯ ПРОФІЛЮ ПАТОЛОГІЇ
-    bool isNeuro = cleanCode.startsWith('G') || cleanCode.startsWith('I6');
-    bool isOrtho = cleanCode.startsWith('M') || cleanCode.startsWith('S') || cleanCode.startsWith('Z96') || cleanCode.startsWith('Z89');
-    bool isCardioLung = cleanCode.startsWith('I2') || cleanCode.startsWith('I5') || cleanCode.startsWith('J');
+    bool isNeuro = cleanCode.startsWith('G') || cleanCode.startsWith('I6') || cleanDiagnosis.contains('невролог');
+    bool isOrtho = cleanCode.startsWith('M') || cleanCode.startsWith('S') || cleanCode.startsWith('Z96') || cleanCode.startsWith('Z89') || cleanDiagnosis.contains('ортопед');
+    bool isCardioLung = cleanCode.startsWith('I2') || cleanCode.startsWith('I5') || cleanCode.startsWith('J') || cleanDiagnosis.contains('кардіо');
     
     // Потужний чекер коморбідності (супутніх важких станів)
     bool hasRenalFailure = cleanCode.startsWith('N18') || cleanCode.startsWith('N19') || cleanDiagnosis.contains('нирк') || cleanComplaints.contains('нирк');
     bool hasMultiorganFailure = cleanCode.contains('R68.8') || cleanDiagnosis.contains('поліорган') || cleanDiagnosis.contains('сепсис');
-    bool hasSeverePain = cleanComplaints.contains('біль') || cleanComplaints.contains('болить') || cleanCode.contains('R52');
 
     // 2. ГЕНЕРАЦІЯ КЛІНІЧНИХ ЗАСТЕРЕЖЕНЬ (Critical Precautions)
     String precautions = "• Стандартний моніторинг ЧСС, АТ, SpO2 перед та після навантаження.\n";
@@ -91,21 +113,19 @@ class SmartIrpEngine {
     // 4. ПОКРОКОВИЙ ПЛАН ПО ДНЯХ (РОЗПОДІЛ НА ФАЗИ)
     List<String> daysPlan = [];
     
-    int phase1End = (treatmentDays * 0.3).round(); // Перші 30% часу - Адаптація
-    int phase2End = (treatmentDays * 0.8).round(); // Наступні 50% часу - Інтенсив
+    int phase1End = (treatmentDays * 0.3).round(); 
+    int phase2End = (treatmentDays * 0.8).round(); 
 
     for (int day = 1; day <= treatmentDays; day++) {
       String dailyDescription = "";
 
       if (hasMultiorganFailure) {
-        // Особливий суворий протокол для пацієнтів у критичному стані
         if (day <= phase1End) {
           dailyDescription = "Фаза І: Щадна пасивна. Позиційне лікування (антидекубітальний протокол) кожні 2 години. Пасивні рухи у дистальних суглобах кінцівок (10-15 повторень). Легкий дренажний масаж грудної клітки. Постійний моніторинг реанімаційних показників.";
         } else {
           dailyDescription = "Фаза ІІ: Стабілізаційна. Дихальні вправи (пасивне спонукання до глибокого видиху). Пасивна мобілізація всіх великих суглобів для запобігання тугорухливості. Ліжкова вертикалізація головного кінця ліжка до 30-45 градусів (контроль АТ!).";
         }
       } else if (isNeuro) {
-        // Неврологічний протокол
         if (day <= phase1End) {
           dailyDescription = "Фаза І: Адаптаційна. Лікування положенням (вирівнювання та симетризація тіла). Пасивні та пасивно-активні вправи за методом Бобат. Вправи для стимуляції глибокої чутливості. Вертикалізація на поворотному столі (за потреби) або присаджування в ліжку з підтримкою. Дренажні дихальні техніки.";
         } else if (day <= phase2End) {
@@ -114,7 +134,6 @@ class SmartIrpEngine {
           dailyDescription = "Фаза ІІІ: Функціональна. Тренування ходи в брусах або з ходунками. Вправи на координацію та баланс (вправи стоячи, перенесення ваги тіла). Ерготерапія: відновлення навичок самообслуговування, застібання ґудзиків, тримання ложки. Ергономіка ходи.";
         }
       } else if (isOrtho) {
-        // Ортопедичний протокол
         if (day <= phase1End) {
           dailyDescription = "Фаза І: Протибольова та протинабрякова. Ізометрична гімнастика для м'язів навколо оперованого/травмованого суглоба. Пасивні рухи на Кinetec (CPM-терапія) у межах безболісної амплітуди. Кріотерапія локально (10-15 хв) після занять для зменшення набряку. Навчання правилам безпечного переміщення.";
         } else if (day <= phase2End) {
@@ -123,9 +142,8 @@ class SmartIrpEngine {
           dailyDescription = "Фаза ІІІ: Силова та пропріоцептивна. Вправи з легким опором (еластичні стрічки Thera-Band). Тренування балансу на балансувальних подушках для відновлення суглобового чуття (пропріоцепції). Корекція стереотипу ходи без допоміжних засобів (або з тростиною). Клінічний гоніометричний контроль.";
         }
       } else {
-        // Загальномедичний / Кардіо-респіраторний протокол
         if (day <= phase1End) {
-          dailyDescription = "Фаза І: Щадно-тренувальна. Дихальна гімнастика (діафрагмальне дихання, контроль темпу видиху). Дозовані ліжкові або приліжкові активні вправи для дрібних м'язових груп. Контроль задишки за шкалою Борга (тримаємо в межах легкого навантаження). Періоди відпочинку між вправами.";
+          dailyDescription = "Faза І: Щадно-тренувальна. Дихальна гімнастика (діафрагмальне дихання, контроль темпу видиху). Дозовані ліжкові або приліжкові активні вправи для дрібних м'язових груп. Контроль задишки за шкалою Борга (тримаємо в межах легкого навантаження). Періоди відпочинку між вправами.";
         } else if (day <= phase2End) {
           dailyDescription = "Фаза ІІ: Збільшення толерантності. Поєднання дихальних вправ із динамічними вправами для рук та ніг сидячи на стільці. Дозована ходьба по коридору під контролем пульсоксиметрії (SpO2 не має падати нижче 92%). Вправи на релаксацію.";
         } else {
@@ -133,7 +151,6 @@ class SmartIrpEngine {
         }
       }
 
-      // Додаємо чергування фізіотерапевтичних методів або масажу по парних днях
       if (day % 2 == 0 && !hasMultiorganFailure) {
         if (isOrtho) dailyDescription += " Локально: Магнітотерапія або ультразвукова терапія для покращення консолідації тканин.";
         if (isNeuro) dailyDescription += " Додатково: Електростимуляція паретичних м'язів або розслабляючий масаж.";
