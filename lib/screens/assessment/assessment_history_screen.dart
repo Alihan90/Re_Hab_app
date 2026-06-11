@@ -1,57 +1,48 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/rehab_provider.dart';
+import 'package:open_file/open_file.dart'; // Пакет для запуску файлу на пристрої
+import '../../services/pdf_generator_service.dart';
+import '../../data/models/patient.dart'; // Твій шлях до моделі пацієнта
 
-class AssessmentHistoryScreen extends StatelessWidget {
-  final String patientId;
-
-  const AssessmentHistoryScreen({super.key, required this.patientId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Історія тестувань'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
-            onPressed: () {
-              // Тут буде логіка експорту в PDF
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Експорт у PDF розпочато...')),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Consumer<RehabProvider>(
-        builder: (context, provider, child) {
-          final history = provider.getResultsForPatient(patientId);
-          
-          if (history.isEmpty) return const Center(child: Text('Тестів ще не проводилося'));
-
-          return ListView.builder(
-            itemCount: history.length,
-            itemBuilder: (context, index) {
-              final result = history[index];
-              return Card(
-                child: ListTile(
-                  title: Text('Шкала: ${result.scaleId.toUpperCase()}'),
-                  subtitle: Text('Дата: ${result.date.toString().substring(0, 16)}'),
-                  trailing: Text('${result.calculatedIndex.toStringAsFixed(1)}%'),
-                  onLongPress: () {
-                    // Видалення запису
-                    provider.deleteResult(result.id); 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Запис видалено')),
-                    );
-                  },
-                ),
-              );
-            },
+// Всередині AppBar -> actions:
+actions: [
+  Padding(
+    padding: const EdgeInsets.only(right: 12.0),
+    child: IconButton(
+      icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.redAccent, size: 28),
+      tooltip: 'Експорт карти ІРП у PDF',
+      onPressed: () async {
+        try {
+          // Показуємо індикатор завантаження, щоб лікар розумів, що процес іде
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const Center(child: CircularProgressIndicator()),
           );
-        },
-      ),
-    );
-  }
-}
+
+          // 1. Отримуємо поточний екземпляр пацієнта (переконайся, що об'єкт patient доступний у твоєму віджеті)
+          // Примітка: Об'єкт `patient` має бути переданий у конструктор екрану історії або взятий із провайдера
+          final PdfGeneratorService pdfService = PdfGeneratorService();
+          
+          // 2. Запускаємо генерацію 
+          final File pdfFile = await pdfService.generateAndSavePdf(patient);
+
+          // Закриваємо індикатор завантаження
+          Navigator.pop(context);
+
+          // 3. Відкриваємо готовий медичний PDF звіт
+          await OpenFile.open(pdfFile.path);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Звіт успішно збережено: ${pdfFile.path.split('/').last}')),
+          );
+        } catch (e) {
+          Navigator.pop(context); // Закриваємо прогрес-бар у разі збою
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Помилка генерації PDF: $e'), backgroundColor: Colors.red),
+          );
+        }
+      },
+    ),
+  ),
+],
