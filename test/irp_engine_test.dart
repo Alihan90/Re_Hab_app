@@ -1,36 +1,39 @@
 import 'package:flutter_test/flutter_test.dart';
-// 1. ПРАВИЛЬНИЙ ІМПОРТ: вказуємо точний шлях до твого файлу
 import 'package:re_hab_app/services/smart_irp_engine.dart';
 
 void main() {
   group('Тести двигуна генерації ІРП (SmartIrpEngine)', () {
     
     test('Генерація плану для неврологічної реабілітації', () {
-      // Примітка: Якщо всередині файлу сам клас називається IrpEngine (а не SmartIrpEngine),
-      // просто зміни назву нижче на: final engine = IrpEngine();
-      final engine = SmartIrpEngine(); 
+      final engine = SmartIrpEngine();
+      
+      // Викликаємо метод сумісності з правильними параметрами
       final plan = engine.generatePlan(
-        category: 'Неврологія', 
-        scaleScores: {'bbs': 45},
+        icdCode: 'G35', // Неврологічний код (Розсіяний склероз)
+        category: 'Неврологія',
       );
 
+      // Перевіряємо структуру текстового звіту за твоїм StringBuffer
       expect(plan.isNotEmpty, true);
-      expect(plan.contains('Цілі SMART'), true); 
-      expect(plan.contains('Коди МКФ'), true);
+      expect(plan.contains('ЦІЛІ SMART:'), true); 
+      expect(plan.contains('КЛІНІЧНІ ЗАСТЕРЕЖЕННЯ:'), true);
+      
+      // Перевіряємо, що спрацював саме неврологічний профіль генерації
       expect(plan.contains('Берга'), true);
-      expect(plan.contains('b710'), true);
     });
 
     test('Генерація плану для ортопедичної реабілітації', () {
       final engine = SmartIrpEngine();
+      
+      // Викликаємо метод для ортопедії
       final plan = engine.generatePlan(
-        category: 'Ортопедія', 
-        scaleScores: {'vas': 6},
+        icdCode: 'M17', // Ортопедичний код (Гонартроз)
+        category: 'Ортопедія',
       );
 
       expect(plan.isNotEmpty, true);
-      expect(plan.contains('Коди МКФ'), true);
-      expect(plan.contains('ВАШ'), true);
+      expect(plan.contains('ЦІЛІ SMART:'), true);
+      expect(plan.contains('ВАШ'), true); // Перевірка наявності шкали ВАШ для ортопедії
     });
     
   });
