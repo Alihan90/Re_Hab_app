@@ -52,7 +52,9 @@ class AuthProvider extends ChangeNotifier {
   /// Автентифікація за логіном та паролем
   Future<bool> loginWithPassword(String username, String password, RehabProvider rehabProvider) async {
     final expectedHash = 'secure_$password';
-    final query = _db.select(_db.users)..where((u) => u.username.equals(username) & u.passwordHash.equals(expectedHash));
+    final query = _db.select(_db.users)
+  ..where((u) => u.username.equals(username))
+  ..where((u) => u.passwordHash.equals(expectedHash));
     final user = await query.getSingleOrNull();
 
     if (user != null) {
