@@ -1,39 +1,36 @@
 import 'package:flutter_test/flutter_test.dart';
-// Перевір цей імпорт відповідно до твоєї структури папок:
-import 'package:re_hab_app/core/irp_engine.dart'; 
+// 1. ПРАВИЛЬНИЙ ІМПОРТ: вказуємо точний шлях до твого файлу
+import 'package:re_hab_app/services/smart_irp_engine.dart';
 
 void main() {
-  group('Тести двигуна генерації ІРП (IrpEngine)', () {
+  group('Тести двигуна генерації ІРП (SmartIrpEngine)', () {
     
     test('Генерація плану для неврологічної реабілітації', () {
-      // Ініціалізація твого енджину (підстав свій метод виклику, якщо він статичний)
-      final engine = IrpEngine();
+      // Примітка: Якщо всередині файлу сам клас називається IrpEngine (а не SmartIrpEngine),
+      // просто зміни назву нижче на: final engine = IrpEngine();
+      final engine = SmartIrpEngine(); 
       final plan = engine.generatePlan(
         category: 'Неврологія', 
-        scaleScores: {'bbs': 45}, // Наприклад, Шкала Берга
+        scaleScores: {'bbs': 45},
       );
 
-      // ВИПРАВЛЕННЯ: plan є String, перевіряємо вміст напряму
       expect(plan.isNotEmpty, true);
       expect(plan.contains('Цілі SMART'), true); 
       expect(plan.contains('Коди МКФ'), true);
-      
-      // Перевірка наявності конкретних маркерів у згенерованому тексті
       expect(plan.contains('Берга'), true);
       expect(plan.contains('b710'), true);
     });
 
     test('Генерація плану для ортопедичної реабілітації', () {
-      final engine = IrpEngine();
+      final engine = SmartIrpEngine();
       final plan = engine.generatePlan(
         category: 'Ортопедія', 
-        scaleScores: {'vas': 6}, // Візуально-аналогова шкала болю
+        scaleScores: {'vas': 6},
       );
 
-      // ВИПРАВЛЕННЯ: перевірка текстового виводу для ортопедії
       expect(plan.isNotEmpty, true);
       expect(plan.contains('Коди МКФ'), true);
-      expect(plan.contains('ВАШ'), true); // Дефолтний ортопедичний план
+      expect(plan.contains('ВАШ'), true);
     });
     
   });
