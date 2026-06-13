@@ -21,15 +21,15 @@ class PdfExportService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         theme: pw.ThemeData.withFont(base: regularFont, bold: boldFont),
-        padding: pw.EdgeInsets.all(24),
+        margin: const pw.EdgeInsets.all(24),
         build: (pw.Context context) {
           return [
             // Штамп закладу (імітація офіційного бланку МОЗ)
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('ЗАТВЕРДЖЕНО МОЗ УКРАЇНИ\nПротокол надання реабілітаційної допомоги', style: pw.TextStyle(fontSize: 8, color: pw.PdfColors.grey700)),
-                pw.Text('Форма первинної фіксації ІРП', style: pw.TextStyle(fontSize: 8, color: pw.PdfColors.grey700)),
+                pw.Text('ЗАТВЕРДЖЕНО МОЗ УКРАЇНИ\nПротокол надання реабілітаційної допомоги', style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                pw.Text('Forma первинної фіксації ІРП', style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
               ],
             ),
             pw.SizedBox(height: 16),
@@ -38,12 +38,12 @@ class PdfExportService {
             pw.Center(
               child: pw.Text(
                 'ІНДИВІДУАЛЬНИЙ РЕАБІЛІТАЦІЙНИЙ ПЛАН (ІРП)',
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: pw.PdfColors.blue900),
+                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900),
                 textAlign: pw.TextAlign.center,
               ),
             ),
             pw.Center(
-              child: pw.Text('Етап: Первинне призначення та升тратегія відновлення', style: pw.TextStyle(fontSize: 11, color: pw.PdfColors.grey900)),
+              child: pw.Text('Етап: Первинне призначення та стратегія відновлення', style: pw.TextStyle(fontSize: 11, color: PdfColors.grey900)),
             ),
             pw.SizedBox(height: 20),
 
@@ -65,16 +65,16 @@ class PdfExportService {
             // 3. ПЕРВИННЕ ТЕСТУВАННЯ ЗА ШКАЛАМИ
             _buildPdfSectionTitle('3. Об\'єктивне тестування (Вхідні клінікометричні дані)'),
             if (assessments.isEmpty)
-              pw.Paragraph(text: 'Інтерактивні об\'єктивні шкали на момент формування плану не проводилися. Оцінка проведена на основі загального соматичного статусу.', style: pw.TextStyle(fontSize: 10, color: pw.PdfColors.grey800))
+              pw.Paragraph(text: 'Інтерактивні об\'єктивні шкали на момент формування плану не проводилися. Оцінка проведена на основі загального соматичного статусу.', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800))
             else
               pw.Column(
                 children: assessments.map((res) {
                   return pw.Padding(
-                    padding: pw.EdgeInsets.only(bottom: 6),
+                    padding: const pw.EdgeInsets.only(bottom: 6),
                     child: pw.Row(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Bullet(bulletColor: pw.PdfColors.blue),
+                        pw.Bullet(bulletColor: PdfColors.blue),
                         pw.SizedBox(width: 6),
                         pw.Expanded(
                           child: pw.Text('${res.scaleName}: ${res.interpretation} (Дата: ${res.date.day}.${res.date.month}.${res.date.year})', style: pw.TextStyle(fontSize: 10)),
@@ -89,15 +89,15 @@ class PdfExportService {
             // 4. SMART ЦІЛІ
             _buildPdfSectionTitle('4. Встановлені цілі реабілітації за критеріями SMART'),
             pw.Container(
-              padding: pw.EdgeInsets.all(8),
-              decoration: pw.BoxDecoration(color: pw.PdfColors.grey100, borderRadius: pw.BorderRadius.all(pw.Radius.circular(6))),
+              padding: const pw.EdgeInsets.all(8),
+              decoration: const pw.BoxDecoration(color: PdfColors.grey100, borderRadius: pw.BorderRadius.all(pw.Radius.circular(6))),
               child: pw.Text(irpPlan.smartGoals, style: pw.TextStyle(fontSize: 10, height: 1.3)),
             ),
             pw.SizedBox(height: 12),
 
             // 5. КЛІНІЧНІ ЗАСТЕРЕЖЕННЯ
             _buildPdfSectionTitle('5. Клінічні застереження та обмеження життєдіяльності'),
-            pw.Text(irpPlan.clinicalPrecautions, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: pw.PdfColors.red900)),
+            pw.Text(irpPlan.clinicalPrecautions, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
             pw.SizedBox(height: 24),
 
             // ПІДПИСИ СТОРОН
@@ -107,7 +107,12 @@ class PdfExportService {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Container(width: 120, border: pw.Border(bottom: pw.BorderSide(width: 1, color: pw.PdfColors.black))),
+                    pw.Container(
+                      width: 120, 
+                      decoration: const pw.BoxDecoration(
+                        border: pw.Border(bottom: pw.BorderSide(width: 1, color: PdfColors.black))
+                      )
+                    ),
                     pw.SizedBox(height: 4),
                     pw.Text('Підпис фізичного терапевта / лікаря', style: pw.TextStyle(fontSize: 8)),
                   ],
@@ -115,7 +120,12 @@ class PdfExportService {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Container(width: 120, border: pw.Border(bottom: pw.BorderSide(width: 1, color: pw.PdfColors.black))),
+                    pw.Container(
+                      width: 120, 
+                      decoration: const pw.BoxDecoration(
+                        border: pw.Border(bottom: pw.BorderSide(width: 1, color: PdfColors.black))
+                      )
+                    ),
                     pw.SizedBox(height: 4),
                     pw.Text('З планом ознайомлений (пацієнт)', style: pw.TextStyle(fontSize: 8)),
                   ],
@@ -153,15 +163,15 @@ class PdfExportService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         theme: pw.ThemeData.withFont(base: regularFont, bold: boldFont),
-        padding: pw.EdgeInsets.all(24),
+        margin: const pw.EdgeInsets.all(24),
         build: (pw.Context context) {
           return [
             // Шапка документа
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('МЕДИЧНА ДОКУМЕНТАЦІЯ ЗА СТАНДАРТАМИ НСЗУ\nКод форми за ДКУД', style: pw.TextStyle(fontSize: 8, color: pw.PdfColors.grey700)),
-                pw.Text('Витяг з медичної карти / Виписка з ІРП', style: pw.TextStyle(fontSize: 8, color: pw.PdfColors.grey700)),
+                pw.Text('МЕДИЧНА ДОКУМЕНТАЦІЯ ЗА СТАНДАРТАМИ НСЗУ\nКод форми за ДКУД', style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                pw.Text('Витяг з медичної карти / Виписка з ІРП', style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
               ],
             ),
             pw.SizedBox(height: 16),
@@ -169,7 +179,7 @@ class PdfExportService {
             pw.Center(
               child: pw.Text(
                 'ВИПИСНИЙ ЕПІКРИЗ ІЗ КАРТКИ РЕАБІЛІТАЦІЇ',
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: pw.PdfColors.green900),
+                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.green900),
                 textAlign: pw.TextAlign.center,
               ),
             ),
@@ -192,23 +202,23 @@ class PdfExportService {
             // МОЗ СТАНДАРТ: ДИНАМІКА ШКАЛ
             _buildPdfSectionTitle('Клінікометричні показники та динаміка за шкалами ВООЗ/МОЗ'),
             if (assessments.isEmpty)
-              pw.Paragraph(text: 'Для даного пацієнта не зафіксовано повторних або первинних тестувань у базі даних додатку.', style: pw.TextStyle(fontSize: 10, color: pw.PdfColors.grey700))
+              pw.Paragraph(text: 'Для даного пацієнта не зафіксовано повторних або первинних тестувань у базі даних додатку.', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700))
             else
               pw.Table(
-                border: pw.TableBorder.all(color: pw.PdfColors.grey400, width: 0.5),
+                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
                 children: [
                   pw.TableRow(
-                    decoration: pw.BoxDecoration(color: pw.PdfColors.grey200),
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey200),
                     children: [
-                      pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Назва інструменту / шкали', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9))),
-                      pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Клінічний результат та інтерпретація бала', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Назва інструменту / шкали', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Клінічний результат та інтерпретація бала', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9))),
                     ],
                   ),
                   ...assessments.map((res) {
                     return pw.TableRow(
                       children: [
-                        pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(res.scaleName, style: pw.TextStyle(fontSize: 9))),
-                        pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(res.interpretation, style: pw.TextStyle(fontSize: 9))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(res.scaleName, style: pw.TextStyle(fontSize: 9))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(res.interpretation, style: pw.TextStyle(fontSize: 9))),
                       ],
                     );
                   }).toList(),
@@ -221,7 +231,7 @@ class PdfExportService {
             pw.Paragraph(
               text: complianceRate >= 80.0
                   ? '🎯 Заплановані короткострокові та довгострокові SMART-цілі досягнуті у повному обсязі. Спостерігається виражена позитивна рухова та соматична динаміка, відновлення рівня самообслуговування пацієнта.'
-                  : '⚠️ Цілі досягнуті частково. Потрібне подовження термінів лікування або адаптація вправ через пропуски занять чи соматичную нестабільність пацієнта.',
+                  : '⚠️ Цілі досягнуті частково. Потрібне подовження термінів лікування або адаптація вправ через пропуски занять чи соматичну нестабільність пацієнта.',
               style: pw.TextStyle(fontSize: 10, height: 1.3),
             ),
             pw.SizedBox(height: 12),
@@ -231,7 +241,7 @@ class PdfExportService {
             pw.Bullet(text: 'Дотримуватись ортопедичного або неврологічного режиму безпеки руху (контроль пози тіла, уникнення перевантажень).', style: pw.TextStyle(fontSize: 9)),
             pw.Bullet(text: 'Повторний огляд мультидисциплінарною реабілітаційною командою (МРК) через 3 місяці.', style: pw.TextStyle(fontSize: 9)),
             if (patient.diagnosis.toString().toLowerCase().contains('нирк') || patient.icdCode.toString().startsWith('N18'))
-              pw.Bullet(text: 'Суворий супутній контроль нефролога, щоденний моніторинг АТ, ваги та набряків кінцівок.', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: pw.PdfColors.red900)),
+              pw.Bullet(text: 'Суворий супутній контроль нефролога, щоденний моніторинг АТ, ваги та набряків кінцівок.', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
             
             pw.SizedBox(height: 32),
 
@@ -243,7 +253,12 @@ class PdfExportService {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Container(width: 150, border: pw.Border(bottom: pw.BorderSide(width: 1, color: pw.PdfColors.black))),
+                    pw.Container(
+                      width: 150, 
+                      decoration: const pw.BoxDecoration(
+                        border: pw.Border(bottom: pw.BorderSide(width: 1, color: PdfColors.black))
+                      )
+                    ),
                     pw.SizedBox(height: 4),
                     pw.Text('Підпис голови МРК / Фізичного терапевта', style: pw.TextStyle(fontSize: 8)),
                   ],
@@ -264,10 +279,10 @@ class PdfExportService {
   // Внутрішній допоміжний метод для побудови заголовків секцій у PDF
   static pw.Widget _buildPdfSectionTitle(String title) {
     return pw.Padding(
-      padding: pw.EdgeInsets.only(top: 10, bottom: 6),
+      padding: const pw.EdgeInsets.only(top: 10, bottom: 6),
       child: pw.Text(
         title,
-        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: pw.PdfColors.blueDark),
+        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900),
       ),
     );
   }
@@ -275,7 +290,7 @@ class PdfExportService {
   // Внутрішній допоміжний метод для рядків типу Ключ: Значення у PDF
   static pw.Widget _buildPdfKeyValue(String key, String value) {
     return pw.Padding(
-      padding: pw.EdgeInsets.symmetric(vertical: 2),
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
