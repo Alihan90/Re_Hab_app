@@ -1,10 +1,9 @@
-import 'package:re_hab_app/screens/patients/patient_details_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rehab_provider.dart';
 import '../../services/smart_irp_engine.dart';
 import '../patients/add_patient_screen.dart';
-import '../patients/patient_details_screen.dart';
+import '../patients/patient_details_screen.dart'; // Прибрано дублікат імпорту зверху
 import '../goniometry/goniometry_tab.dart';
 import '../exercises/exercises_tab.dart';
 import '../settings/settings_tab.dart';
@@ -140,7 +139,6 @@ class _ScalesTabState extends State<ScalesTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Фільтрація каталогу шкал на основі критеріїв користувача
     final filteredScales = _engine.scalesCatalog.where((scale) {
       final matchesSearch = scale.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           scale.fullName.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -151,7 +149,6 @@ class _ScalesTabState extends State<ScalesTab> {
 
     return Column(
       children: [
-        // Панель пошуку та швидких фільтрів
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: TextField(
@@ -164,8 +161,6 @@ class _ScalesTabState extends State<ScalesTab> {
             onChanged: (val) => setState(() => _searchQuery = val),
           ),
         ),
-
-        // Горизонтальний фільтр за КАТЕГОРІЯМИ НОЗОЛОГІЙ
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -187,8 +182,6 @@ class _ScalesTabState extends State<ScalesTab> {
             }).toList(),
           ),
         ),
-
-        // Горизонтальний фільтр за ВІКОВИМИ ГРУПАМИ
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Row(
@@ -212,8 +205,6 @@ class _ScalesTabState extends State<ScalesTab> {
           ),
         ),
         const Divider(height: 10),
-
-        // Результати пошуку та виводу медичних даних
         Expanded(
           child: filteredScales.isEmpty
               ? const Center(child: Text('За вказаними фільтрами шкал не знайдено.'))
@@ -223,7 +214,6 @@ class _ScalesTabState extends State<ScalesTab> {
                   itemBuilder: (ctx, idx) {
                     final scale = filteredScales[idx];
                     
-                    // Визначення кольору іконки залежно від напрямку медицини
                     Color categoryColor = Colors.grey;
                     IconData categoryIcon = Icons.assignment;
                     if (scale.category == 'Неврологія') {
