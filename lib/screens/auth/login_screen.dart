@@ -13,24 +13,17 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _passwordController = TextEditingController();
   
-  bool _isRegister = false;
-  String _selectedRole = 'Doctor';
-  final List<String> _roles = ['Doctor', 'Physical Therapist', 'Assistant'];
+  bool _isCreateMode = false;
+  String _selectedRole = 'Лікар';
+  dynamic _selectedUser;
+  
+  final List<String> _roles = ['Лікар', 'Фізичний терапевт', 'Асистент'];
 
   @override
   void dispose() {
     _nameController.dispose();
-    _passwordController.dispose();
     super.dispose();
-  }
-
-  // Функція для створення безпечного системного email із імені (для бекенду)
-  String _generateSystemEmail(String name) {
-    // Прибираємо пробіли, переводимо в нижній регістр і робимо локальний домен
-    final cleanName = name.trim().toLowerCase().replaceAll(' ', '_');
-    return '$cleanName@rehab.local';
   }
 
   @override
@@ -38,9 +31,17 @@ class _LoginScreenState extends State<LoginScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final rehabProvider = Provider.of<RehabProvider>(context, listen: false);
 
+    // Автоматично вмикаємо режим створення профілю, якщо в базі ще нікого немає
+    if (authProvider.savedUsers.isEmpty) {
+      _isCreateMode = true;
+    } else if (!_isCreateMode && _selectedUser == null) {
+      // За замовчуванням вибираємо першого лікаря зі списку
+      _selectedUser = authProvider.savedUsers.first;
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isRegister ? 'Реєстрація спеціаліста' : 'Вхід до системи'),
+        title: Text(_isCreateMode ? 'Створення профілю' : 'Вхід у систему'),
         elevation: 2,
       ),
       body: Center(
@@ -51,64 +52,70 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Іконка для гарного вигляду
                 Icon(
-                  Icons.health_and_safety,
+                  Icons.medical_services,
                   size: 80,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 24),
-                
-                // ПОЛЕ: ІМ'Я / ЛОГІН
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: "Ім'я або Логін",
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return "Введіть ім'я";
-                    if (v.trim().length < 3) return "Ім'я занадто коротке";
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
 
-                // ПОЛЕ: ПАРОЛЬ
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Пароль',
-                    prefixIcon: Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(),
+                if (authProvider.errorMessage != null) ...[
+                  Text(
+                    authProvider.errorMessage!,
+                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    textAlign: Center,
                   ),
-                  obscureText: true,
-                  validator: (v) => v == null || v.length < 6 ? 'Пароль має бути від 6 символів' : null,
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ],
 
-                // ПОЛЕ: ВИБІР СПЕЦІАЛЬНОСТІ (Показуємо лише при реєстрації)
-                if (_isRegister) ...[
-                  DropdownButtonFormField<String>(
-                    value: _selectedRole,
+                // РЕЖИМ 1: ВИБІР ІСНУЮЧОГО СПЕЦІАЛІСТА
+                if (!_isCreateMode) ...[
+                  DropdownButtonFormField<dynamic>(
+                    value: _selectedUser,
                     decoration: const InputDecoration(
-                      labelText: 'Спеціалізація / Роль',
-                      prefixIcon: Icon(Icons.medical_services), // ВИПРАВЛЕНО ТУТ
+                      labelText: 'Оберіть свій профіль',
+                      prefixIcon: Icon(Icons.person_outline),
                       border: OutlineInputBorder(),
                     ),
-                    items: _roles.map<DropdownMenuItem<String>>((String val) {
-                      return DropdownMenuItem<String>(
-                        value: val,
-                        child: Text(val),
+                    items: authProvider.savedUsers.map<DropdownMenuItem<dynamic>>((dynamic user) {
+                      return DropdownMenuItem<dynamic>(
+                        value: user,
+                        child: Text(user.fullName ?? ''),
                       );
                     }).toList(),
                     onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _selectedRole = value;
-                        });
-                      }
+                      setState(() {
+                        _selectedUser = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // РЕЖИМ 2: СТВОРЕННЯ НОВОГО СПЕЦІАЛІСТА
+                if (_isCreateMode) ...[
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: "Прізвище та Ім'я",
+                      prefixIcon: Icon(Icons.badge_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) => v == null || v.trim().isEmpty ? "Введіть ім'я" : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _selectedRole,
+                    decoration: const InputDecoration(
+                      labelText: 'Посада / Роль',
+                      prefixIcon: Icon(Icons.assignment_ind_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _roles.map((String val) {
+                      return DropdownMenuItem<String>(value: val, child: Text(val));
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) setState(() => _selectedRole = value);
                     },
                   ),
                   const SizedBox(height: 24),
@@ -126,64 +133,42 @@ class _LoginScreenState extends State<LoginScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          final inputName = _nameController.text.trim();
-                          final inputPassword = _passwordController.text.trim();
-                          // Генеруємо системний email на основі введеного імені
-                          final systemEmail = _generateSystemEmail(inputName);
-
-                          if (_isRegister) {
-                            // Реєстрація
-                            final success = await authProvider.registerDoctor(
-                              email: systemEmail,
-                              username: inputName,
-                              password: inputPassword,
-                              fullName: inputName, // Використовуємо ім'я і як повне ім'я
-                            );
-                            
-                            if (success && mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Реєстрація успішна! Тепер увійдіть.')),
-                              );
-                              setState(() => _isRegister = false);
-                            } else if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(authProvider.errorMessage ?? 'Помилка реєстрації')),
-                              );
-                            }
-                          } else {
-                            // Вхід
-                            final success = await authProvider.loginWithPassword(
-                              email: systemEmail,
-                              password: inputPassword,
+                        if (_isCreateMode) {
+                          if (_formKey.currentState!.validate()) {
+                            final success = await authProvider.createProfileAndLogin(
+                              name: _nameController.text.trim(),
+                              role: _selectedRole,
                               rehabProvider: rehabProvider,
                             );
-                            
                             if (success && mounted) {
                               Navigator.pushReplacementNamed(context, '/home');
-                            } else if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(authProvider.errorMessage ?? 'Помилка авторизації (перевірте з\'єднання)')),
-                              );
+                            }
+                          }
+                        } else {
+                          if (_selectedUser != null) {
+                            final success = await authProvider.loginWithSelectedUser(_selectedUser, rehabProvider);
+                            if (success && mounted) {
+                              Navigator.pushReplacementNamed(context, '/home');
                             }
                           }
                         }
                       },
-                      child: Text(_isRegister ? 'Зареєструватися' : 'Увійти'),
+                      child: Text(_isCreateMode ? 'Створити та увійти' : 'Увійти в додаток'),
                     ),
                   ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 
-                // ПЕРЕМИКАЧ МІЖ ВХОДОМ ТА РЕЄСТРАЦІЄЮ
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isRegister = !_isRegister;
-                    });
-                  },
-                  child: Text(_isRegister ? 'Вже є акаунт? Увійти за ім\'ям' : 'Новий спеціаліст? Створити профіль'),
-                )
+                // ПЕРЕМИКАЧ МІЖ РЕЖИМАМИ (Показуємо тільки якщо в базі вже хтось є)
+                if (authProvider.savedUsers.isNotEmpty)
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _isCreateMode = !_isCreateMode;
+                      });
+                    },
+                    child: Text(_isCreateMode ? 'Повернутися до списку профілів' : 'Додати нового колегу/спеціаліста'),
+                  )
               ],
             ),
           ),
