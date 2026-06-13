@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_hab_app/providers/auth_provider.dart';
+import 'package:re_hab_app/providers/rehab_provider.dart'; // ДОДАНО імпорт
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,6 +31,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    // Отримуємо екземпляр RehabProvider без підписки на зміни, суто для виклику методів
+    final rehabProvider = Provider.of<RehabProvider>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(title: Text(_isRegister ? 'Реєстрація' : 'Вхід до системи')),
@@ -84,12 +87,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
                         if (_isRegister) {
-                          // ПОАКТИВОВАНО: Передаємо обрану роль _selectedRole в AuthProvider
+                          // ВИПРАВЛЕНО: аргументи приведені у відповідність до методу в AuthProvider
                           final success = await authProvider.registerDoctor(
                             email: _emailController.text.trim(),
+                            username: _emailController.text.trim(),
                             password: _passwordController.text.trim(),
-                            name: _nameController.text.trim(),
-                            role: _selectedRole,
+                            fullName: _nameController.text.trim(),
                           );
                           if (success && mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -97,20 +100,20 @@ class _LoginScreenState extends State<LoginScreen> {
                             );
                             setState(() => _isRegister = false);
                           } else if (mounted) {
-                            // ДОДАНО: Обробка невдалої реєстрації
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(authProvider.errorMessage ?? 'Помилка реєстрації')),
                             );
                           }
                         } else {
+                          // ВИПРАВЛЕНО: додано обов'язковий параметр rehabProvider
                           final success = await authProvider.loginWithPassword(
                             email: _emailController.text.trim(),
                             password: _passwordController.text.trim(),
+                            rehabProvider: rehabProvider,
                           );
                           if (success && mounted) {
                             Navigator.pushReplacementNamed(context, '/home');
                           } else if (mounted) {
-                            // ДОДАНО: Обробка невдалого входу
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(authProvider.errorMessage ?? 'Невірний email або пароль')),
                             );
