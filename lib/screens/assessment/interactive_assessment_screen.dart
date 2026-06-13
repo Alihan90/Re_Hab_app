@@ -32,11 +32,10 @@ class _InteractiveAssessmentScreenState extends State<InteractiveAssessmentScree
     // 2. Розрахунок результату
     double total = _answers.values.fold(0, (sum, val) => sum + val);
 
-    // 3. Збереження через провайдер
+    // 3. Збереження через провайдер (ВИПРАВЛЕНО: Вилучено неіснуючий параметр answers)
     Provider.of<RehabProvider>(context, listen: false).saveAssessmentResult(
       patientId: widget.patientId,
       scaleId: widget.scale.id,
-      answers: _answers,
       totalScore: total,
       calculatedIndex: (total / widget.scale.maxRawScore) * 100,
       interpretation: "Результат: $total з ${widget.scale.maxRawScore}. Рівень: ${((total / widget.scale.maxRawScore) * 100).toStringAsFixed(1)}%",
@@ -87,23 +86,34 @@ class _InteractiveAssessmentScreenState extends State<InteractiveAssessmentScree
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.scale.name)),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: widget.scale.sections.length,
-        separatorBuilder: (_, __) => const Divider(),
-        itemBuilder: (context, sIdx) {
-          final section = widget.scale.sections[sIdx];
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(section.title, style: Theme.of(context).textTheme.titleMedium),
-              if (section.description.isNotEmpty) Text(section.description),
-              const SizedBox(height: 10),
-              _buildSectionInput(section),
-            ],
-          );
-        },
-      ),
+      body: widget.scale.sections.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Для цієї проби використовується протокол заміру життєвих показників у реальному часі.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: widget.scale.sections.length,
+              separatorBuilder: (_, __) => const Divider(),
+              itemBuilder: (context, sIdx) {
+                final section = widget.scale.sections[sIdx];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(section.title, style: Theme.of(context).textTheme.titleMedium),
+                    if (section.description.isNotEmpty) Text(section.description),
+                    const SizedBox(height: 10),
+                    _buildSectionInput(section),
+                  ],
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _submit,
         label: const Text('Зберегти результат'),
