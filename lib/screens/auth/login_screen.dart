@@ -12,9 +12,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
+  final _passwordController = TextEditingController();
   
   bool _isRegister = false;
   String _selectedRole = 'Doctor';
@@ -22,10 +21,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
     _nameController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  // Функція для створення безпечного системного email із імені (для бекенду)
+  String _generateSystemEmail(String name) {
+    // Прибираємо пробіли, переводимо в нижній регістр і робимо локальний домен
+    final cleanName = name.trim().toLowerCase().replaceAll(' ', '_');
+    return '$cleanName@rehab.local';
   }
 
   @override
@@ -34,99 +39,150 @@ class _LoginScreenState extends State<LoginScreen> {
     final rehabProvider = Provider.of<RehabProvider>(context, listen: false);
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isRegister ? 'Реєстрація' : 'Вхід до системи')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
+      appBar: AppBar(
+        title: Text(_isRegister ? 'Реєстрація спеціаліста' : 'Вхід до системи'),
+        elevation: 2,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (_isRegister)
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: "Повне ім'я"),
-                    validator: (v) => v == null || v.isEmpty ? 'Введіть ім\'я' : null,
-                  ),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) => v == null || !v.contains('@') ? 'Некоректний Email' : null,
-                ),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'Пароль'),
-                  obscureText: true,
-                  validator: (v) => v == null || v.length < 6 ? 'Пароль занадто короткий' : null,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _selectedRole,
-                  decoration: const InputDecoration(labelText: 'Посада / Роль'),
-                  items: _roles.map<DropdownMenuItem<String>>((String val) {
-                    return DropdownMenuItem<String>(
-                      value: val,
-                      child: Text(val),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedRole = value;
-                      });
-                    }
-                  },
+                // Іконка для гарного вигляду
+                Icon(
+                  Icons.health_and_safety,
+                  size: 80,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 24),
+                
+                // ПОЛЕ: ІМ'Я / ЛОГІН
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: "Ім'я або Логін",
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return "Введіть ім'я";
+                    if (v.trim().length < 3) return "Ім'я занадто коротке";
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // ПОЛЕ: ПАРОЛЬ
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Пароль',
+                    prefixIcon: Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  obscureText: true,
+                  validator: (v) => v == null || v.length < 6 ? 'Пароль має бути від 6 символів' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // ПОЛЕ: ВИБІР СПЕЦІАЛЬНОСТІ (Показуємо лише при реєстрації)
+                if (_isRegister) ...[
+                  DropdownButtonFormField<String>(
+                    value: _selectedRole,
+                    decoration: const InputDecoration(
+                      labelText: 'Спеціалізація / Роль',
+                      prefixIcon: Icon(Icons.medical_services_outline),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _roles.map<DropdownMenuItem<String>>((String val) {
+                      return DropdownMenuItem<String>(
+                        value: val,
+                        child: Text(val),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _selectedRole = value;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // КНОПКА ДІЇ
                 if (authProvider.isLoading)
                   const CircularProgressIndicator()
                 else
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
-                        if (_isRegister) {
-                          final success = await authProvider.registerDoctor(
-                            email: _emailController.text.trim(),
-                            username: _emailController.text.trim(),
-                            password: _passwordController.text.trim(),
-                            fullName: _nameController.text.trim(),
-                          );
-                          if (success && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Реєстрація успішна!')),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () async {
+                        if (_formKey.currentState!.validate()) {
+                          final inputName = _nameController.text.trim();
+                          final inputPassword = _passwordController.text.trim();
+                          // Генеруємо системний email на основі введеного імені
+                          final systemEmail = _generateSystemEmail(inputName);
+
+                          if (_isRegister) {
+                            // Реєстрація
+                            final success = await authProvider.registerDoctor(
+                              email: systemEmail,
+                              username: inputName,
+                              password: inputPassword,
+                              fullName: inputName, // Використовуємо ім'я і як повне ім'я
                             );
-                            setState(() => _isRegister = false);
-                          } else if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(authProvider.errorMessage ?? 'Помилка реєстрації')),
+                            
+                            if (success && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Реєстрація успішна! Тепер увійдіть.')),
+                              );
+                              setState(() => _isRegister = false);
+                            } else if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(authProvider.errorMessage ?? 'Помилка реєстрації')),
+                              );
+                            }
+                          } else {
+                            // Вхід
+                            final success = await authProvider.loginWithPassword(
+                              email: systemEmail,
+                              password: inputPassword,
+                              rehabProvider: rehabProvider,
                             );
-                          }
-                        } else {
-                          final success = await authProvider.loginWithPassword(
-                            email: _emailController.text.trim(),
-                            password: _passwordController.text.trim(),
-                            rehabProvider: rehabProvider,
-                          );
-                          if (success && mounted) {
-                            Navigator.pushReplacementNamed(context, '/home');
-                          } else if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(authProvider.errorMessage ?? 'Невірний email або пароль')),
-                            );
+                            
+                            if (success && mounted) {
+                              Navigator.pushReplacementNamed(context, '/home');
+                            } else if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(authProvider.errorMessage ?? 'Помилка авторизації (перевірте з\'єднання)')),
+                              );
+                            }
                           }
                         }
-                      }
-                    },
-                    child: Text(_isRegister ? 'Зареєструватися' : 'Увійти'),
+                      },
+                      child: Text(_isRegister ? 'Зареєструватися' : 'Увійти'),
+                    ),
                   ),
+
+                const SizedBox(height: 12),
+                
+                // ПЕРЕМИКАЧ МІЖ ВХОДОМ ТА РЕЄСТРАЦІЄЮ
                 TextButton(
                   onPressed: () {
                     setState(() {
                       _isRegister = !_isRegister;
                     });
                   },
-                  child: Text(_isRegister ? 'Вже є акаунт? Увійти' : 'Немає акаунту? Реєстрація'),
+                  child: Text(_isRegister ? 'Вже є акаунт? Увійти за ім\'ям' : 'Новий спеціаліст? Створити профіль'),
                 )
               ],
             ),
