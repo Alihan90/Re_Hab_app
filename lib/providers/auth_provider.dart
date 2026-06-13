@@ -1,132 +1,100 @@
 import 'package:flutter/material.dart';
-import 'package:drift/drift.dart'; // 1. ДОДАНО: Імпорт пакету Drift для роботи з типами виразів
+import 'package:drift/drift.dart';
 import 'package:re_hab_app/providers/rehab_provider.dart';
 
 class AuthProvider with ChangeNotifier {
   final dynamic _db; // Твій екземпляр Drift БД
   bool _isAuthenticated = false;
-  final bool _isBiometricsEnabled = true; 
   List<dynamic> _savedUsers = [];  
 
-  // Поля стану для екранів авторизації
   bool _isLoading = false;
   String? _errorMessage;
 
   AuthProvider(this._db) {
-    _loadSavedUsers(); 
+    refreshUsers(); 
   }
 
   bool get isAuthenticated => _isAuthenticated;
-  bool get isBiometricsEnabled => _isBiometricsEnabled;
   List<dynamic> get savedUsers => _savedUsers;
-
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  Future<void> _loadSavedUsers() async {
+  // Оновлення списку спеціалістів із бази даних
+  Future<void> refreshUsers() async {
     try {
       _savedUsers = await _db.select(_db.users).get();
       notifyListeners();
     } catch (e) {
-      debugPrint("Не вдалося завантажити збережених користувачів: $e");
+      debugPrint("Не вдалося завантажити користувачів: $e");
     }
   }
 
-  // Вхід за біометрією
-  Future<bool> loginWithBiometrics(String username, RehabProvider rehabProvider) async {
+  // ВХІД: Просто беремо обраного із списку лікаря й передаємо в систему
+  Future<bool> loginWithSelectedUser(dynamic user, RehabProvider rehabProvider) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
-    try {
-      // 2. ВИПРАВЛЕНО: Явно вказуємо тип аргументу (dynamic u) та кастимо результат в Expression<bool>
-      final query = _db.select(_db.users)
-        ..where((dynamic u) => u.username.equals(username) as Expression<bool>);
-      final user = await query.getSingleOrNull();
 
-      if (user != null) {
-        _isAuthenticated = true;
-        rehabProvider.setCurrentUser(user.id, user.fullName);
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      }
+    try {
+      _isAuthenticated = true;
+      // Передаємо ID та повне ім'я спеціаліста в RehabProvider для відображення в картах пацієнтів
+      rehabProvider.setCurrentUser(user.id, user.fullName);
       _isLoading = false;
       notifyListeners();
-      return false;
+      return true;
     } catch (e) {
-      debugPrint("Помилка біометричного входу: $e");
       _isLoading = false;
-      _errorMessage = 'Помилка біометрії: $e'; 
+      _errorMessage = 'Помилка входу: $e';
       notifyListeners();
       return false;
     }
   }
 
-  // Вхід за паролем
-  Future<bool> loginWithPassword({
-    String? email,
-    String? username,
-    required String password,
+  // РЕЄСТРАЦІЯ: Створюємо новий профіль у базі даних та одразу заходимо
+  Future<bool> createProfileAndLogin({
+    required String name,
+    required String role,
     required RehabProvider rehabProvider,
   }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
-    final targetUser = username ?? email ?? '';
-
     try {
-      // 3. ВИПРАВЛЕНО ТУТ: Додано "as Expression<bool>" для обох умов фільтрації,
-      // щоб розробник Drift всередині додатка чітко розумів тип операції.
-      final query = _db.select(_db.users)
-        ..where((dynamic u) => u.username.equals(targetUser) as Expression<bool>)
-        ..where((dynamic u) => u.passwordHash.equals(password) as Expression<bool>); 
+      // Формуємо красиве відображення профілю для документів, наприклад: "Іван Іванов (Фізичний терапевт)"
+      final displayName = "$name ($role)";
       
-      final user = await query.getSingleOrNull();
+      // Робимо прямий SQL інсерт у базу даних, щоб уникнути конфліктів із генерацією кодів Drift
+      await _db.customInsert(
+        'INSERT INTO users (username, password_hash, full_name) VALUES (?, ?, ?)',
+        variables: [Variable(name), Variable('no_password'), Variable(displayName)],
+      );
 
-      if (user != null) {
+      // Перечитуємо базу, щоб новий користувач з'явився у списку
+      await refreshUsers();
+
+      // Шукаємо його в оновленому списку, щоб виконати авто-вхід
+      final dynamic newUser = _savedUsers.firstWhere(
+        (u) => u.username == name,
+        orElse: () => null,
+      );
+
+      if (newUser != null) {
         _isAuthenticated = true;
-        rehabProvider.setCurrentUser(user.id, user.fullName);
+        rehabProvider.setCurrentUser(newUser.id, newUser.fullName);
         _isLoading = false;
         notifyListeners();
         return true;
       }
-      
+
       _isLoading = false;
-      _errorMessage = 'Невірний email або пароль';
+      _errorMessage = 'Профіль створено, але виберіть його зі списку для входу.';
       notifyListeners();
       return false;
     } catch (e) {
-      debugPrint("Помилка входу за паролем: $e");
+      debugPrint("Помилка створення профілю: $e");
       _isLoading = false;
-      _errorMessage = 'Помилка бази даних: $e'; 
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Реєстрація лікаря
-  Future<bool> registerDoctor({
-    String? email,
-    String? username,
-    required String password,
-    required String fullName,
-  }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    final targetUser = username ?? email ?? '';
-
-    try {
-      await _loadSavedUsers();
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      debugPrint("Помилка реєстрації лікаря: $e");
-      _isLoading = false;
-      _errorMessage = 'Помилка реєстрації: $e'; 
+      _errorMessage = 'Не вдалося зберегти в базу: $e';
       notifyListeners();
       return false;
     }
