@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class RehabProvider with ChangeNotifier {
-  final dynamic database; // Зберігає інстанс твоєї бази даних Drift
+  final dynamic database; // Зберігає інстанс бази даних Drift
   int? _currentUserId;
   String? _currentUserName;
 
