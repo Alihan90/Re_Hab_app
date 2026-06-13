@@ -18,13 +18,29 @@ class RehabProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // Метод для збереження результатів інтерактивного тестування у базі даних
+  Future<void> saveAssessmentResult({
+    required int patientId,
+    required String scaleId,
+    required int score,
+    required String interpretation,
+  }) async {
+    try {
+      // Тут буде твоя реалізація роботи з Drift, наприклад:
+      // await database.saveAssessment(patientId, scaleId, score, interpretation);
+      
+      // Імітуємо виконання успішної операції та оновлюємо слухачів UI
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Помилка при збереженні результатів тестування: $e");
+      rethrow;
+    }
+  }
+
   // Метод для виходу з акаунту
   void logout() {
     _currentUserId = null;
     _currentUserName = null;
     notifyListeners();
   }
-
-  // 💡 ПРИМІТКА: Якщо у цьому класі раніше були твої методи для вправ, 
-  // пацієнтів чи шкал реабілітації — просто допиши їх нижче, вони нічому не заважатимуть.
 }
