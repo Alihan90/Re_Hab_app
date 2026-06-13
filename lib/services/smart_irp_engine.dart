@@ -10,15 +10,26 @@ class SmartIrpPlan {
   });
 }
 
+class MockScale {
+  final String id;
+  final String name;
+  MockScale({required this.id, required this.name});
+}
+
 class SmartIrpEngine {
-  
-  /// МЕТОД ДЛЯ СУМІСНОСТІ З ЮНІТ-ТЕСТАМИ (test/irp_engine_test.dart)
-  /// Приймає параметри з тесту та повертає текстове представлення плану
+  // Додаємо каталог шкал, який шукає home_screen.dart
+  List<MockScale> get scalesCatalog => [
+    MockScale(id: 'bbs', name: 'Berg Balance Scale'),
+    MockScale(id: 'bi', name: 'Barthel Index'),
+    MockScale(id: 'mrc', name: 'MRC-SumScore'),
+  ];
+
   String generatePlan({required String icdCode, required String category}) {
+    // Тепер викликаємо як static всередині класу
     final plan = generate(
       icdCode: icdCode,
-      diagnosis: category, // Використовуємо категорію як частину діагнозу для аналізу
-      treatmentDays: 10,   // Базовий дефолтний термін для тестів
+      diagnosis: category,
+      treatmentDays: 10,
     );
 
     final buffer = StringBuffer();
@@ -34,8 +45,8 @@ class SmartIrpEngine {
     return buffer.toString();
   }
 
-  /// Головний метод генерації ІРП на основі клінічних даних
-  SmartIrpPlan generate({
+  // РОБИМО МЕТОД СТАТИЧНИМ (додано static), щоб працював виклик з екрану деталей
+  static SmartIrpPlan generate({
     required String icdCode,
     required String diagnosis,
     required int treatmentDays,
@@ -46,16 +57,13 @@ class SmartIrpEngine {
     final cleanComplaints = (complaints ?? '').toLowerCase();
     final cleanDiagnosis = diagnosis.toLowerCase();
 
-    // 1. ВИЗНАЧЕННЯ ПРОФІЛЮ ПАТОЛОГІЇ
     bool isNeuro = cleanCode.startsWith('G') || cleanCode.startsWith('I6') || cleanDiagnosis.contains('невролог');
     bool isOrtho = cleanCode.startsWith('M') || cleanCode.startsWith('S') || cleanCode.startsWith('Z96') || cleanCode.startsWith('Z89') || cleanDiagnosis.contains('ортопед');
     bool isCardioLung = cleanCode.startsWith('I2') || cleanCode.startsWith('I5') || cleanCode.startsWith('J') || cleanDiagnosis.contains('кардіо');
     
-    // Потужний чекер коморбідності (супутніх важких станів)
     bool hasRenalFailure = cleanCode.startsWith('N18') || cleanCode.startsWith('N19') || cleanDiagnosis.contains('нирк') || cleanComplaints.contains('нирк');
     bool hasMultiorganFailure = cleanCode.contains('R68.8') || cleanDiagnosis.contains('поліорган') || cleanDiagnosis.contains('сепсис');
 
-    // 2. ГЕНЕРАЦІЯ КЛІНІЧНИХ ЗАСТЕРЕЖЕНЬ (Critical Precautions)
     String precautions = "• Стандартний моніторинг ЧСС, АТ, SpO2 перед та після навантаження.\n";
     if (hasMultiorganFailure) {
       precautions += "• ⚠️ КРИТИЧНО: Пацієнт у стані поліорганної недостатності. Навантаження виключно пасивне або в межах ліжка (ліжкова вертикалізація). Заборонено перевтому!\n";
@@ -69,7 +77,6 @@ class SmartIrpEngine {
       precautions += "• Дотримання осьового навантаження на кінцівку згідно з хірургічним протоколом. Захист трансплантата/ендопротеза.\n";
     }
 
-    // 3. ГЕНЕРАЦІЯ SMART-ЦІЛЕЙ
     String goals = "";
     String timeBound = "$treatmentDays днів";
     
@@ -102,7 +109,7 @@ class SmartIrpEngine {
       goals = "S: Загальнофізичне відновлення організму, покращення м'язового тонусу та загальної рухливості.\n"
               "M: Збільшення індексу мобільності (наприклад, за шкалою Rivermead) на 2-3 пункти.\n"
               "A: Досяжно через індивідуально підібраний комплекс ЛФК та кінезіотерапії.\n"
-              "R: Пов'язано із покращенням якості життя та загального функціонального статусу пацієнта.\n"
+              "R: Пов'язано із покращенням якості життя та загального functional статусу пацієнта.\n"
               "T: Виконання протоколу за $timeBound.";
     }
 
@@ -110,9 +117,7 @@ class SmartIrpEngine {
       goals += "\n\n🎯 Враховано очікування пацієнта: \"$expectations\"";
     }
 
-    // 4. ПОКРОКОВИЙ ПЛАН ПО ДНЯХ (РОЗПОДІЛ НА ФАЗИ)
     List<String> daysPlan = [];
-    
     int phase1End = (treatmentDays * 0.3).round(); 
     int phase2End = (treatmentDays * 0.8).round(); 
 
@@ -145,7 +150,7 @@ class SmartIrpEngine {
         if (day <= phase1End) {
           dailyDescription = "Фаза I: Щадно-тренувальна. Дихальна гімнастика (діафрагмальне дихання, контроль темпу видиху). Дозовані ліжкові або приліжкові активні вправи для дрібних м'язових груп. Контроль задишки за шкалою Борга (тримаємо в межах легкого навантаження). Періоди відпочинку між вправами.";
         } else if (day <= phase2End) {
-          dailyDescription = "Фаза II: Збільшення толерантності. Поєднання дихальних вправ із динамічними вправами для рук та ніг сидячи на стільці. Дозована ходьба по коридору под контролем пульсоксиметрії (SpO2 не має падати нижче 92%). Вправи на релаксацію.";
+          dailyDescription = "Фаза II: Збільшення толерантності. Поєднання дихальних вправ із динамічними вправами для рук та ніг сидячи на стільці. Дозована ходьба по коридору під контролем пульсоксиметрії (SpO2 не має падати нижче 92%). Вправи на релаксацію.";
         } else {
           dailyDescription = "Фаза III: Інтеграційна. Навчання підйому по сходах (ергономіка дихання при підйомі). Вправи на загальну витривалість тривалістю до 20-25 хвилин. Складання домашньої програми вправ та інструктаж родичів.";
         }
