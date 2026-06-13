@@ -2,24 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:re_hab_app/providers/rehab_provider.dart';
 
 class AuthProvider with ChangeNotifier {
-  final dynamic _db; // Інстанс твоєї бази даних Drift
+  final dynamic _db; // Твій екземпляр Drift БД
   bool _isAuthenticated = false;
-  bool _isBiometricsEnabled = true; // Вмикаємо біометрію за дефолтом
-  List<dynamic> _savedUsers = [];  // Список збережених користувачів для випадаючого списку
+  final bool _isBiometricsEnabled = true; 
+  List<dynamic> _savedUsers = [];  
 
   AuthProvider(this._db) {
-    _loadSavedUsers(); // Автоматично завантажуємо користувачів при старті
+    _loadSavedUsers(); 
   }
 
-  // ГЕТТЕРИ, які вимагає твій login_screen.dart
   bool get isAuthenticated => _isAuthenticated;
   bool get isBiometricsEnabled => _isBiometricsEnabled;
   List<dynamic> get savedUsers => _savedUsers;
 
-  // Асинхронне завантаження користувачів з бази даних
   Future<void> _loadSavedUsers() async {
     try {
-      // Витягуємо користувачів з таблиці через Drift
       _savedUsers = await _db.select(_db.users).get();
       notifyListeners();
     } catch (e) {
@@ -27,7 +24,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 1. ВХІД ЗА БІОМЕТРІЄЮ (2 позиційні аргументи, як у твоєму логін-екрані)
+  // Вхід за біометрією (позиційні параметри, як у рядку 54 вашого логіну)
   Future<bool> loginWithBiometrics(String username, RehabProvider rehabProvider) async {
     try {
       final query = _db.select(_db.users)..where((u) => u.username.equals(username));
@@ -46,12 +43,16 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 2. ВХІД ЗА ПАРОЛЕМ (позиційні аргументи)
-  Future<bool> loginWithPassword(String username, String password, RehabProvider rehabProvider) async {
+  // Вхід за паролем (іменовані параметри, як у рядку 167 вашого логіну)
+  Future<bool> loginWithPassword({
+    required String username,
+    required String password,
+    required RehabProvider rehabProvider,
+  }) async {
     try {
       final query = _db.select(_db.users)
         ..where((u) => u.username.equals(username))
-        ..where((u) => u.passwordHash.equals(password)); // Перевірка хэшу або паролю
+        ..where((u) => u.passwordHash.equals(password)); 
       
       final user = await query.getSingleOrNull();
 
@@ -68,17 +69,14 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 3. РЕЄСТРАЦІЯ ЛІКАРЯ (іменовані параметри)
-  // Примітка: Якщо в login_screen.dart ти викликаєш цей метод без імен полей,
-  // просто прибери фігурні дужки {} з параметрів нижче.
+  // Реєстрація лікаря (іменовані параметри, як у рядку 155 вашого логіну)
   Future<bool> registerDoctor({
     required String username,
     required String password,
     required String fullName,
   }) async {
     try {
-      // Тут працює твоя стандартна логіка вставки в Drift БД
-      // Після успішного додавання оновлюємо список збережених користувачів
+      // Тут виконується вставка у вашу таблицю користувачів Drift
       await _loadSavedUsers();
       return true;
     } catch (e) {
@@ -87,7 +85,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Вихід із системи
   void logout() {
     _isAuthenticated = false;
     notifyListeners();
