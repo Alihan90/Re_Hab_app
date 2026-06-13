@@ -94,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     value: _selectedRole,
                     decoration: const InputDecoration(
                       labelText: 'Спеціалізація / Роль',
-                      prefixIcon: Icon(Icons.medical_services_outline),
+                      prefixIcon: Icon(Icons.medical_services), // ВИПРАВЛЕНО ТУТ
                       border: OutlineInputBorder(),
                     ),
                     items: _roles.map<DropdownMenuItem<String>>((String val) {
