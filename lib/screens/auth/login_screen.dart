@@ -18,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String _selectedRole = 'Лікар';
   dynamic _selectedUser;
   
-  final List<String> _roles = ['Лікар', 'Фізичний терапевт', 'Асистент'];
+  final List<String> _roles = ['Лікар', 'Физичний терапевт', 'Асистент'];
 
   @override
   void dispose() {
@@ -63,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     authProvider.errorMessage!,
                     style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                    textAlign: Center,
+                    textAlign: TextAlign.center, // ОЦЕЙ РЯДОК ВИПРАВЛЕНО! Тепер компілятор буде задоволений
                   ),
                   const SizedBox(height: 16),
                 ],
