@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/rehab_provider.dart';
 import '../../services/smart_irp_engine.dart';
 import '../patients/add_patient_screen.dart';
-import '../patients/patient_details_screen.dart'; // Прибрано дублікат імпорту зверху
+import '../patients/patient_details_screen.dart';
 import '../goniometry/goniometry_tab.dart';
 import '../exercises/exercises_tab.dart';
 import '../settings/settings_tab.dart';
@@ -23,7 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final rehabProvider = Provider.of<RehabProvider>(context);
     final activePatients = rehabProvider.patients.where((p) => p.isActive).toList();
 
-    // Список екранів для нижньої навігації
     final List<Widget> _tabs = [
       // ВКЛАДКА 0: ПАЦІЄНТИ
       activePatients.isEmpty
@@ -61,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-      // ВКЛАДКА 1: ПОВНОФУНКЦІОНАЛЬНИЙ КАТАЛОГ ШКАЛ
+      // ВКЛАДКА 1: КАТАЛОГ ШКАЛ
       const ScalesTab(),
 
       // ВКЛАДКА 2: ЦИФРОВА ГОНІОМЕТРІЯ
@@ -123,7 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- ІНТЕРАКТИВНИЙ МОДУЛЬ КЛІНІЧНИХ ШКАЛ ---
 class ScalesTab extends StatefulWidget {
   const ScalesTab({Key? key}) : super(key: key);
 
