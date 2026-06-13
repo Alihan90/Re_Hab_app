@@ -27,14 +27,41 @@ jobs:
       with:
         channel: 'stable'
 
-    # 4. Створюємо Android-структуру та автоматично вшиваємо дозволи на інтернет
-    - name: Reconstruct Android platform folders and inject permissions
+    # 4. Створюємо Android-структуру та ЗАПИСУЄМО ЧИСТИЙ НАДІЙНИЙ МАНІФЕСТ
+    - name: Reconstruct Android platform folders and write Manifest
       run: |
         flutter create . --platforms=android
-        # Вставляємо дозвіл на інтернет перед тегом <application>
-        sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
-        # Дозволяємо HTTP-трафік (Cleartext), якщо база даних працює без https://
-        sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
+        cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <application
+                android:label="re_hab_app"
+                android:name="${applicationName}"
+                android:icon="@mipmap/ic_launcher"
+                android:usesCleartextTraffic="true">
+                <activity
+                    android:name=".MainActivity"
+                    android:exported="true"
+                    android:launchMode="singleTop"
+                    android:theme="@style/LaunchTheme"
+                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                    android:hardwareAccelerated="true"
+                    android:windowSoftInputMode="adjustResize">
+                    <meta-data
+                      android:name="io.flutter.embedding.android.NormalTheme"
+                      android:resource="@style/NormalTheme"
+                      />
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN"/>
+                        <category android:name="android.intent.category.LAUNCHER"/>
+                    </intent-filter>
+                </activity>
+                <meta-data
+                    android:name="flutterEmbedding"
+                    android:value="2" />
+            </application>
+        </manifest>
+        EOF
 
     # 5. Завантаження залежностей
     - name: Install dependencies
