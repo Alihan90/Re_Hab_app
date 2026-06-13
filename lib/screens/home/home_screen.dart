@@ -1,3 +1,4 @@
+import 'package:re_hab_app/screens/patients/patient_details_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/rehab_provider.dart';
