@@ -7,7 +7,7 @@ class AuthProvider with ChangeNotifier {
   final bool _isBiometricsEnabled = true; 
   List<dynamic> _savedUsers = [];  
 
-  // ДОДАНО: Поля стану, які шукають екрани авторизації та деталей
+  // Поля стану для екранів авторизації
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -19,7 +19,6 @@ class AuthProvider with ChangeNotifier {
   bool get isBiometricsEnabled => _isBiometricsEnabled;
   List<dynamic> get savedUsers => _savedUsers;
 
-  // ДОДАНО: Геттери стану для UI
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -54,13 +53,13 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Помилка біометричного входу: $e");
       _isLoading = false;
-      _errorMessage = e.toString();
+      _errorMessage = 'Помилка біометрії: $e'; // Показуємо реальну помилку
       notifyListeners();
       return false;
     }
   }
 
-  // Вхід за паролем (ОНОВЛЕНО: додано параметр email для сумісності з UI)
+  // Вхід за паролем
   Future<bool> loginWithPassword({
     String? email,
     String? username,
@@ -71,7 +70,6 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    // Перестраховка: якщо UI шле email замість username, беремо його
     final targetUser = username ?? email ?? '';
 
     try {
@@ -96,13 +94,14 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Помилка входу за паролем: $e");
       _isLoading = false;
-      _errorMessage = 'Помилка з\'єднання з базою';
+      // ВИПРАВЛЕНО: Тепер ми виводимо точний текст помилки Drift/SQLite на екран смартфона
+      _errorMessage = 'Помилка бази даних: $e'; 
       notifyListeners();
       return false;
     }
   }
 
-  // Реєстрація лікаря (ОНОВЛЕНО: додано параметр email для сумісності з UI)
+  // Реєстрація лікаря
   Future<bool> registerDoctor({
     String? email,
     String? username,
@@ -116,7 +115,9 @@ class AuthProvider with ChangeNotifier {
     final targetUser = username ?? email ?? '';
 
     try {
-      // Тут твоя майбутня логіка інсерту Drift
+      // Тут буде твій Drift інсерт, наприклад:
+      // await _db.into(_db.users).insert(UsersCompanion.insert(username: targetUser, passwordHash: password, fullName: fullName));
+      
       await _loadSavedUsers();
       _isLoading = false;
       notifyListeners();
@@ -124,7 +125,7 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Помилка реєстрації лікаря: $e");
       _isLoading = false;
-      _errorMessage = 'Помилка реєстрації';
+      _errorMessage = 'Помилка реєстрації: $e'; // Показуємо реальну помилку
       notifyListeners();
       return false;
     }
