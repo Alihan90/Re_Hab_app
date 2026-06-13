@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:re_hab_app/providers/auth_provider.dart';
-import 'package:re_hab_app/providers/rehab_provider.dart'; // ДОДАНО імпорт
+import 'package:re_hab_app/providers/rehab_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,7 +31,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    // Отримуємо екземпляр RehabProvider без підписки на зміни, суто для виклику методів
     final rehabProvider = Provider.of<RehabProvider>(context, listen: false);
 
     return Scaffold(
@@ -87,7 +86,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
                         if (_isRegister) {
-                          // ВИПРАВЛЕНО: аргументи приведені у відповідність до методу в AuthProvider
                           final success = await authProvider.registerDoctor(
                             email: _emailController.text.trim(),
                             username: _emailController.text.trim(),
@@ -105,7 +103,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             );
                           }
                         } else {
-                          // ВИПРАВЛЕНО: додано обов'язковий параметр rehabProvider
                           final success = await authProvider.loginWithPassword(
                             email: _emailController.text.trim(),
                             password: _passwordController.text.trim(),
