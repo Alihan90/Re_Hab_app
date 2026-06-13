@@ -10,22 +10,65 @@ class SmartIrpPlan {
   });
 }
 
+// ОНОВЛЕНО: Додано всі поля, які викликає інтерфейс головного екрана
 class MockScale {
   final String id;
   final String name;
-  MockScale({required this.id, required this.name});
+  final String fullName;
+  final String category;
+  final String ageGroup;
+  final double minScore;
+  final double maxScore;
+  final String interpretation;
+
+  MockScale({
+    required this.id,
+    required this.name,
+    required this.fullName,
+    required this.category,
+    required this.ageGroup,
+    required this.minScore,
+    required this.maxScore,
+    required this.interpretation,
+  });
 }
 
 class SmartIrpEngine {
-  // Додаємо каталог шкал, який шукає home_screen.dart
+  // ОНОВЛЕНО: Наповнено каталог шкал даними для фільтрації та рендерингу
   List<MockScale> get scalesCatalog => [
-    MockScale(id: 'bbs', name: 'Berg Balance Scale'),
-    MockScale(id: 'bi', name: 'Barthel Index'),
-    MockScale(id: 'mrc', name: 'MRC-SumScore'),
+    MockScale(
+      id: 'bbs',
+      name: 'BBS',
+      fullName: 'Berg Balance Scale (Шкала балансу Берга)',
+      category: 'Неврологія',
+      ageGroup: 'Всі',
+      minScore: 0,
+      maxScore: 56,
+      interpretation: '0-20: високий ризик падіння; 21-40: помірний ризик; 41-56: низький ризик падіння.',
+    ),
+    MockScale(
+      id: 'bi',
+      name: 'BI',
+      fullName: 'Barthel Index (Індекс життєдіяльності Бартел)',
+      category: 'Загальні',
+      ageGroup: 'Всі',
+      minScore: 0,
+      maxScore: 100,
+      interpretation: '0-20: повна залежність; 21-60: виражена; 61-90: помірна; 91-99: легка; 100: повна незалежність.',
+    ),
+    MockScale(
+      id: 'mrc',
+      name: 'MRC',
+      fullName: 'MRC-SumScore (Шкала оцінки м\'язової сили)',
+      category: 'Неврологія',
+      ageGroup: 'Всі',
+      minScore: 0,
+      maxScore: 60,
+      interpretation: 'Сума балів для 12 м\'язових груп. Значення < 48 балів вказує на набуту слабкість (ICU-AW).',
+    ),
   ];
 
   String generatePlan({required String icdCode, required String category}) {
-    // Тепер викликаємо як static всередині класу
     final plan = generate(
       icdCode: icdCode,
       diagnosis: category,
@@ -45,7 +88,6 @@ class SmartIrpEngine {
     return buffer.toString();
   }
 
-  // РОБИМО МЕТОД СТАТИЧНИМ (додано static), щоб працював виклик з екрану деталей
   static SmartIrpPlan generate({
     required String icdCode,
     required String diagnosis,
@@ -132,7 +174,7 @@ class SmartIrpEngine {
         }
       } else if (isNeuro) {
         if (day <= phase1End) {
-          dailyDescription = "Фаза I: Адаптаційна. Лікування положенням (вирівнювання та симетризація тіла). Пасивні та пасивно-активні вправи за методом Бобат. Вправи для стимуляції глибокої чутливості. Вертикалізація на поворотному столі (за потреби) або присаджування в ліжку з підтримкою. Дренажні дихальні техніки.";
+          dailyDescription = "Фаза I: Адаптаційна. Лікування положенням (вирівнювання та симетризація тіла). Пасивні та пасивно-активні вправи за методом Бобат. Вправи для стимуляції глибокої чутливості. Вертикалізація на поворотного столі (за потреби) або присаджування в ліжку з підтримкою. Дренажні дихальні техніки.";
         } else if (day <= phase2End) {
           dailyDescription = "Фаза II: Мобілізаційна (Інтенсивна). Активно-пасивна гімнастика з використанням дзеркальної терапії. Пропріоцептивна нейром'язова фасилітація (PNF). Тренування сидіння без підтримки. Перші спроби вставання біля опори. Масаж паретичних кінцівок (стимулюючий або розслабляючий залежно від тонусу).";
         } else {
