@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 
-// Тимчасові класи-заглушки для сумісності типів (якщо вони ще не імпортовані)
+// ОНОВЛЕНО: Модель тепер містить діагноз та МКХ-10 код
 class MockPatient {
   final int id;
   final String fullName;
   final bool isActive;
-  MockPatient({required this.id, required this.fullName, this.isActive = true});
+  final String diagnosis; 
+  final String icdCode;   
+
+  MockPatient({
+    required this.id, 
+    required this.fullName, 
+    this.isActive = true,
+    required this.diagnosis,
+    required this.icdCode,
+  });
 }
 
 class MockExercise {
@@ -24,7 +33,7 @@ class RehabProvider with ChangeNotifier {
   String _locale = 'uk';
   bool _isDarkMode = false;
 
-  // Списки даних (заглушки, які ти потім зв'яжеш із Drift)
+  // Списки даних
   List<MockPatient> _patients = [];
   List<MockExercise> _exercises = [];
 
@@ -57,7 +66,7 @@ class RehabProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Додавання пацієнта
+  // Додавання пацієнта (ОНОВЛЕНО: додано мапінг нових полів)
   Future<void> addPatient({
     required String fullName,
     required DateTime dateOfBirth,
@@ -67,8 +76,14 @@ class RehabProvider with ChangeNotifier {
     String? complaints,
     String? expectations,
   }) async {
-    // Тут буде реальний Drift insert. Поки додаємо в локальний список:
-    _patients.add(MockPatient(id: _patients.length + 1, fullName: fullName, isActive: true));
+    // Додаємо в локальний список із усіма потрібними параметрами
+    _patients.add(MockPatient(
+      id: _patients.length + 1, 
+      fullName: fullName, 
+      isActive: true,
+      diagnosis: diagnosis,
+      icdCode: icdCode,
+    ));
     notifyListeners();
   }
 
@@ -80,7 +95,7 @@ class RehabProvider with ChangeNotifier {
 
   // Отримання історії тестувань для конкретного пацієнта
   List<dynamic> getAssessmentsForPatient(String patientId) {
-    return []; // Повертає список результатів із бази даних
+    return []; 
   }
 
   Future<void> saveAssessmentResult({
