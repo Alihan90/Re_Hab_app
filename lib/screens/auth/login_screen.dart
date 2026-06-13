@@ -62,7 +62,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 DropdownButtonFormField<String>(
                   value: _selectedRole,
                   decoration: const InputDecoration(labelText: 'Посада / Роль'),
-                  // ПОМИЛКУ ВИПРАВЛЕНО: Явно типізовано map до DropdownMenuItem<String>
                   items: _roles.map<DropdownMenuItem<String>>((String val) {
                     return DropdownMenuItem<String>(
                       value: val,
@@ -85,26 +84,36 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
                         if (_isRegister) {
-                          // ПОМИЛКУ ВИПРАВЛЕНО: Переведено на іменовані аргументи
+                          // ПОАКТИВОВАНО: Передаємо обрану роль _selectedRole в AuthProvider
                           final success = await authProvider.registerDoctor(
                             email: _emailController.text.trim(),
                             password: _passwordController.text.trim(),
                             name: _nameController.text.trim(),
+                            role: _selectedRole,
                           );
                           if (success && mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Реєстрація успішна!')),
                             );
                             setState(() => _isRegister = false);
+                          } else if (mounted) {
+                            // ДОДАНО: Обробка невдалої реєстрації
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(authProvider.errorMessage ?? 'Помилка реєстрації')),
+                            );
                           }
                         } else {
-                          // ПОМИЛКУ ВИПРАВЛЕНО: Переведено на іменовані аргументи
                           final success = await authProvider.loginWithPassword(
                             email: _emailController.text.trim(),
                             password: _passwordController.text.trim(),
                           );
                           if (success && mounted) {
                             Navigator.pushReplacementNamed(context, '/home');
+                          } else if (mounted) {
+                            // ДОДАНО: Обробка невдалого входу
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(authProvider.errorMessage ?? 'Невірний email або пароль')),
+                            );
                           }
                         }
                       }
