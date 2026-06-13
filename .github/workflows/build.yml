@@ -27,15 +27,20 @@ jobs:
       with:
         channel: 'stable'
 
-    # 4. Правильно і чисто створюємо відсутню Android-структуру
-    - name: Reconstruct Android platform folders
-      run: flutter create . --platforms=android
+    # 4. Створюємо Android-структуру та автоматично вшиваємо дозволи на інтернет
+    - name: Reconstruct Android platform folders and inject permissions
+      run: |
+        flutter create . --platforms=android
+        # Вставляємо дозвіл на інтернет перед тегом <application>
+        sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+        # Дозволяємо HTTP-трафік (Cleartext), якщо база даних працює без https://
+        sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
 
     # 5. Завантаження залежностей
     - name: Install dependencies
       run: flutter pub get
 
-    # 6. Автоматична генерація коду для бази даних Drift (через актуальний dart run)
+    # 6. Автоматична генерація коду для бази даних Drift
     - name: Run Drift code generation
       run: dart run build_runner build --delete-conflicting-outputs
 
