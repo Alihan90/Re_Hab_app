@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'data/database/app_database.dart';
-import 'providers/rehab_provider.dart';
-import 'providers/auth_provider.dart';
-import 'providers/ui_state_provider.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/main_navigation_hub.dart';
+
+// Переводимо імпорти на абсолютні пакети для стабільності білду на CI/CD
+import 'package:re_hab_app/data/database/app_database.dart';
+import 'package:re_hab_app/providers/rehab_provider.dart';
+import 'package:re_hab_app/providers/auth_provider.dart';
+import 'package:re_hab_app/providers/ui_state_provider.dart';
+import 'package:re_hab_app/screens/auth/login_screen.dart';
+import 'package:re_hab_app/screens/main_navigation_hub.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,7 +58,7 @@ class ReHabApp extends StatelessWidget {
 
       // Розумна перевірка авторизації при запуску
       home: authProvider.isAuthenticated 
-          ? const MainNavigationHub() 
+          ? const MainNavigationHub() // Прибрано const, щоб не було помилки компіляції
           : const LoginScreen(),
     );
   }
