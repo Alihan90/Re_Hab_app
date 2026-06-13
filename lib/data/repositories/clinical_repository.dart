@@ -1,4 +1,4 @@
-import '../../models/clinical_models.dart';
+import 'package:re_hab_app/models/clinical_models.dart';
 
 class ClinicalRepository {
   /// Базова база вправ (збережена повністю)
@@ -96,7 +96,7 @@ class ClinicalRepository {
       name: 'Ортостатична проба (Шелонг-протокол)',
       type: ScaleType.vitalsProtocol,
       description: 'Дослідження стану вегетативної нервової системи та серцево-судинної системи пацієнта при переході з горизонтального положення у вертикальне.',
-      items: [], // Керується кастомною UI формою замірів
+      items: [],
     ),
 
     // 4. ТІЛТ-ТЕСТ (Тип: Пасивна ортостатична проба на поворотному столі)
