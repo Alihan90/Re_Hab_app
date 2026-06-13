@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'home/home_screen.dart';
-import 'scales/scales_screen.dart'; // Переконайся, що цей файл існує або створимо порожній
-import 'exercises/exercises_screen.dart'; // Переконайся, що цей файл існує
-import 'settings/settings_screen.dart'; // Переконайся, що цей файл існує
+import 'package:re_hab_app/screens/home/home_screen.dart';
+import 'package:re_hab_app/screens/scales/scales_screen.dart'; 
+import 'package:re_hab_app/screens/exercises/exercises_screen.dart'; 
+import 'package:re_hab_app/screens/settings/settings_screen.dart'; 
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({Key? key}) : super(key: key);
@@ -14,7 +14,6 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  // Тимчасові або постійні екрани для вкладок
   final List<Widget> _screens = [
     const HomeScreen(),
     const Center(child: Text('📊 Екран шкал (Тут буде 40+ шкал по нозологіях)')),
