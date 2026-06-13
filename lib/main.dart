@@ -58,7 +58,7 @@ class ReHabApp extends StatelessWidget {
 
       // Розумна перевірка авторизації при запуску
       home: authProvider.isAuthenticated 
-          ? const MainNavigationHub() // Прибрано const, щоб не було помилки компіляції
+          ? MainNavigationHub() // Прибрано const, щоб не було помилки компіляції
           : const LoginScreen(),
     );
   }
