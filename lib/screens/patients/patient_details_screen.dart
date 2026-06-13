@@ -1,127 +1,110 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:re_hab_app/providers/auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class PatientDetailsScreen extends StatelessWidget {
+  final dynamic patient; // Приймає об'єкт пацієнта з RehabProvider
 
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _nameController = TextEditingController();
-  
-  bool _isRegister = false;
-  String _selectedRole = 'Doctor';
-  final List<String> _roles = ['Doctor', 'Physical Therapist', 'Assistant'];
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _nameController.dispose();
-    super.dispose();
-  }
+  const PatientDetailsScreen({Key? key, required this.patient}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-
     return Scaffold(
-      appBar: AppBar(title: Text(_isRegister ? 'Реєстрація' : 'Вхід до системи')),
-      body: Padding(
+      appBar: AppBar(
+        title: const Text('Картка пацієнта'),
+        elevation: 2,
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                if (_isRegister)
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: "Повне ім'я"),
-                    validator: (v) => v == null || v.isEmpty ? 'Введіть ім\'я' : null,
-                  ),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) => v == null || !v.contains('@') ? 'Некоректний Email' : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Основна інформація
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      child: Text(
+                        patient.fullName.isNotEmpty ? patient.fullName[0] : 'П',
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            patient.fullName,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: patient.isActive ? Colors.green.shade100 : Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              patient.isActive ? 'Активна картка' : 'Архів',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: patient.isActive ? Colors.green.shade800 : Colors.grey.shade800,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'Пароль'),
-                  obscureText: true,
-                  validator: (v) => v == null || v.length < 6 ? 'Пароль занадто короткий' : null,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _selectedRole,
-                  decoration: const InputDecoration(labelText: 'Посада / Роль'),
-                  // ПОМИЛКУ ВИПРАВЛЕНО: Явно типізовано map до DropdownMenuItem<String>
-                  items: _roles.map<DropdownMenuItem<String>>((String val) {
-                    return DropdownMenuItem<String>(
-                      value: val,
-                      child: Text(val),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedRole = value;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 24),
-                if (authProvider.isLoading)
-                  const CircularProgressIndicator()
-                else
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
-                        if (_isRegister) {
-                          // ПОМИЛКУ ВИПРАВЛЕНО: Переведено на іменовані аргументи
-                          final success = await authProvider.registerDoctor(
-                            email: _emailController.text.trim(),
-                            password: _passwordController.text.trim(),
-                            name: _nameController.text.trim(),
-                          );
-                          if (success && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Реєстрація успішна!')),
-                            );
-                            setState(() => _isRegister = false);
-                          }
-                        } else {
-                          // ПОМИЛКУ ВИПРАВЛЕНО: Переведено на іменовані аргументи
-                          final success = await authProvider.loginWithPassword(
-                            email: _emailController.text.trim(),
-                            password: _passwordController.text.trim(),
-                          );
-                          if (success && mounted) {
-                            Navigator.pushReplacementNamed(context, '/home');
-                          }
-                        }
-                      }
-                    },
-                    child: Text(_isRegister ? 'Зареєструватися' : 'Увійти'),
-                  ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isRegister = !_isRegister;
-                    });
-                  },
-                  child: Text(_isRegister ? 'Вже є акаунт? Увійти' : 'Немає акаунту? Реєстрація'),
-                )
-              ],
+              ),
             ),
-          ),
+            const SizedBox(height: 16),
+
+            // Медичні дані
+            const Text(
+              'Клінічний статус',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              elevation: 1.5,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Діагноз:',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      patient.diagnosis,
+                      style: const TextStyle(fontSize: 15, height: 1.3),
+                    ),
+                    const Divider(height: 24),
+                    const Text(
+                      'Код МКХ-10:',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      patient.icdCode,
+                      style: const TextStyle(fontSize: 16, letterSpacing: 1.1, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
