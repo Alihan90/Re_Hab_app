@@ -40,14 +40,15 @@ class ClinicalRepository {
     ),
   ];
 
-  /// ГЛОБАЛЬНИЙ РЕЄСТР КЛІНІЧНИХ ШКАЛ ТА ТЕСТІВ ДОДАТКУ (Синхронізовано з UI)
+  /// ГЛОБАЛЬНИЙ РЕЄСТР КЛІНІЧНИХ ШКАЛ ТА ТЕСТІВ ДОДАТКУ
   static final List<ClinicalScale> allScales = [
     // 1. ШКАЛА RASS
     ClinicalScale(
       id: 'rass',
       name: 'Шкала ажитації-седації Річмонда (RASS)',
       type: ScaleType.selectRow,
-      description: 'Оцінка рівня свідомості, психомоторного збудження або глибини седації пацієнта в палатах інтенсивної терапії та ранньої реабілітації.',
+      category: 'Інтенсивна терапія',
+      description: 'Оцека рівня свідомості, психомоторного збудження або глибини седації пацієнта в палатах інтенсивної терапії та ранньої реабілітації.',
       maxRawScore: 4.0,
       sections: [
         ScaleSection(
@@ -75,6 +76,7 @@ class ClinicalRepository {
       id: 'ashworth',
       name: 'Модифікована шкала спастичності Ешворта (MAS)',
       type: ScaleType.selectRow,
+      category: 'Нейрореабілітація',
       description: 'Клінічна оцінка тонусу м\'язів при пасивному згинанні/розгинанні кінцівки у пацієнтів з ураженням центрального нейрона.',
       maxRawScore: 5.0,
       sections: [
@@ -99,6 +101,7 @@ class ClinicalRepository {
       id: 'orthostatic_test',
       name: 'Ортостатична проба (Шелонг-протокол)',
       type: ScaleType.vitalsProtocol,
+      category: 'Кардіо-респіраторна',
       description: 'Дослідження стану вегетативної нервової системи та серцево-судинної системи пацієнта при переході з горизонтального положення у вертикальне.',
       maxRawScore: 2.0,
       sections: [],
@@ -109,6 +112,7 @@ class ClinicalRepository {
       id: 'tilt_test',
       name: 'Тілт-тест (Пасивна ортостатична проба)',
       type: ScaleType.vitalsProtocol,
+      category: 'Кардіо-респіраторна',
       description: 'Діагностика синкопальних станів невідомого генезу, оцінка барорецепторного рефлексу під впливом пасивної зміни положення тіла.',
       maxRawScore: 2.0,
       sections: [],
@@ -119,7 +123,8 @@ class ClinicalRepository {
       id: 'berg',
       name: 'Шкала балансу Берга (BBS)',
       type: ScaleType.multiItem,
-      description: '14-пунктовий тест для оцінки функціонального балансу пацієнта.',
+      category: 'Мобільність',
+      description: '14-пунктовий тест для оцінки funktionального балансу пацієнта.',
       maxRawScore: 56.0,
       sections: [
         ScaleSection(
@@ -154,6 +159,7 @@ class ClinicalRepository {
       id: 'barthel',
       name: 'Модифікований Індекс Бартел (ADL)',
       type: ScaleType.multiItem,
+      category: 'Незалежність',
       description: 'Оцінка повсякденної активності та рівня побутової незалежності пацієнта.',
       maxRawScore: 100.0,
       sections: [
