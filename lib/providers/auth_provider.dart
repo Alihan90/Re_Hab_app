@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:drift/drift.dart'; // 1. ДОДАНО: Імпорт пакету Drift для роботи з типами виразів
 import 'package:re_hab_app/providers/rehab_provider.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -37,7 +38,9 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      final query = _db.select(_db.users)..where((u) => u.username.equals(username));
+      // 2. ВИПРАВЛЕНО: Явно вказуємо тип аргументу (dynamic u) та кастимо результат в Expression<bool>
+      final query = _db.select(_db.users)
+        ..where((dynamic u) => u.username.equals(username) as Expression<bool>);
       final user = await query.getSingleOrNull();
 
       if (user != null) {
@@ -53,7 +56,7 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Помилка біометричного входу: $e");
       _isLoading = false;
-      _errorMessage = 'Помилка біометрії: $e'; // Показуємо реальну помилку
+      _errorMessage = 'Помилка біометрії: $e'; 
       notifyListeners();
       return false;
     }
@@ -73,9 +76,11 @@ class AuthProvider with ChangeNotifier {
     final targetUser = username ?? email ?? '';
 
     try {
+      // 3. ВИПРАВЛЕНО ТУТ: Додано "as Expression<bool>" для обох умов фільтрації,
+      // щоб розробник Drift всередині додатка чітко розумів тип операції.
       final query = _db.select(_db.users)
-        ..where((u) => u.username.equals(targetUser))
-        ..where((u) => u.passwordHash.equals(password)); 
+        ..where((dynamic u) => u.username.equals(targetUser) as Expression<bool>)
+        ..where((dynamic u) => u.passwordHash.equals(password) as Expression<bool>); 
       
       final user = await query.getSingleOrNull();
 
@@ -94,7 +99,6 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Помилка входу за паролем: $e");
       _isLoading = false;
-      // ВИПРАВЛЕНО: Тепер ми виводимо точний текст помилки Drift/SQLite на екран смартфона
       _errorMessage = 'Помилка бази даних: $e'; 
       notifyListeners();
       return false;
@@ -115,9 +119,6 @@ class AuthProvider with ChangeNotifier {
     final targetUser = username ?? email ?? '';
 
     try {
-      // Тут буде твій Drift інсерт, наприклад:
-      // await _db.into(_db.users).insert(UsersCompanion.insert(username: targetUser, passwordHash: password, fullName: fullName));
-      
       await _loadSavedUsers();
       _isLoading = false;
       notifyListeners();
@@ -125,7 +126,7 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Помилка реєстрації лікаря: $e");
       _isLoading = false;
-      _errorMessage = 'Помилка реєстрації: $e'; // Показуємо реальну помилку
+      _errorMessage = 'Помилка реєстрації: $e'; 
       notifyListeners();
       return false;
     }
